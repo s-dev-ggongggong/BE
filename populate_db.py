@@ -1,6 +1,6 @@
 import json
 from app import create_app,db
-from model.models import User, DashboardItem, Email
+from models.models import User, DashboardItem, Email, Training
 from datetime import datetime
 
 def populate_database():

@@ -1,8 +1,8 @@
-from flask import Flask, request, jsonify, make_response
+from flask import Flask, request, jsonify
 from extensions import db,ma
-from datetime import datetime
 from flask_swagger_ui import get_swaggerui_blueprint
 from config import Config
+from routes.routes import routes
 
 def create_app():
     app= Flask(__name__)
@@ -25,16 +25,12 @@ def create_app():
 
 
     with app.app_context():
-        # import Model
-        from model import models
-        # import routes
+     
+        
+        db.drop_all()        
         db.create_all()
 
-        from route.routes import routes
         app.register_blueprint(routes)
+        
     return app
-
-# if __name__ == '__main__':
-#     app=create_app()
-#     print(f"Database URI: {app.config['SQLALCHEMY_DATABASE_URI']}")
-#     app.run(debug=True)
+ 
