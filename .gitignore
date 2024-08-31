@@ -1,0 +1,3 @@
+__pycache__/
+*.pyc
+db/e_sol.db

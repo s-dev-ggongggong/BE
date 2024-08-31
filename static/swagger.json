@@ -1,0 +1,228 @@
+{
+"openapi": "3.0.0",
+    "info": {
+      "title": "Email Test Server API",
+      "description": "API for Email Test Server",
+      "version": "1.0.0"
+    },
+    "paths": {
+        "/user":{
+            "post":{
+                "summary":"create a new user",
+                "requestBody":{
+                    "required" : true,
+                    "content":{
+                        "application/json":{
+                            "schema":{
+                            "$ref": "#/components/schemas/User"
+                            }
+                        }
+                    }
+                },
+                "response":{
+                    "200" :{
+                        "description": "Users created success",
+                        "content":{
+                            "application/json":{
+                                "schema":{
+                                    "$ref":"#/components/schemas/User"
+                                }
+                            }
+                        }
+                    }       
+                }
+            },
+            "get":{
+                "summary" : "Get all users",
+                "responses":{
+                    "200":{
+                        "description": "Successful response",
+                        "content":{
+                            "application/json":{
+                                "schema": {
+                                    "type" :"array",
+                                    "items" : {
+                                        "$ref" :"#/components/schemas/User"
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/user/{id}":{
+            "get":{
+                "summary": "Get a user by Id",
+                "parameters":[
+                    {
+                        "name" :"id",
+                        "in" : "path",
+                        "requireed" : true,
+                        "schema":{
+                            "type":"integer"
+                        }
+                    }
+                ],
+                "responses":{
+                    "200": {
+                      "description": "Successful response",
+                      "content": {
+                        "application/json": {
+                          "schema": {
+                            "$ref": "#/components/schemas/User"
+                          }
+                        }
+                      }
+                    }
+                  }         
+            },
+            "put":{
+                "summary": "Update a user",
+                "parameters": [
+                  {
+                    "name": "id",
+                    "in": "path",
+                    "required": true,
+                    "schema": {
+                      "type": "integer"
+                    }
+                  }
+                ],
+                "requestBody": {
+                  "required": true,
+                  "content": {
+                    "application/json": {
+                      "schema": {
+                        "$ref": "#/components/schemas/User"
+                      }
+                    }
+                  }
+                },
+                "responses": {
+                  "200": {
+                    "description": "User updated successfully",
+                    "content": {
+                      "application/json": {
+                        "schema": {
+                          "$ref": "#/components/schemas/User"
+                        }
+                      }
+                    }
+                  }
+                }
+            },
+            "delete": {
+                "summary": "Delete a user",
+                "parameters": [
+                  {
+                    "name": "id",
+                    "in": "path",
+                    "required": true,
+                    "schema": {
+                      "type": "integer"
+                    }
+                  }
+                ],
+                "responses": {
+                  "200": {
+                    "description": "User deleted successfully",
+                    "content": {
+                      "application/json": {
+                        "schema": {
+                          "$ref": "#/components/schemas/User"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            },
+        "/dashboard_item":{
+            "post":{
+                "summary" :"create a new dashboard item",
+                "RequestBody":{
+                    "required" : true,
+                    "content" : {
+                        "application/json" : {
+                            "schema":{
+                                "$ref":"#/components/schemas/DashbaordItem"
+                            }
+                        }
+                    }
+                },
+                "response": {
+                    "200": {
+                      "description": "User deleted successfully",
+                      "content": {
+                        "application/json": {
+                          "schema": {
+                            "$ref": "#/components/schemas/User"
+                          }
+                        }
+                      }
+                    }
+                  }
+                },
+            "get":{
+                "summary": "Get all dashbaord items",
+                "responses" :{
+                    "200": {
+                      "description": "User deleted successfully",
+                      "content": {
+                        "application/json": {
+                          "schema": {
+                            "$ref": "#/components/schemas/User"
+                          }
+                        }
+                      }
+                    }
+                  }
+            }
+        },
+        "/users": {
+            "get": {
+            "summary": "Returns a list of users",
+            "responses": {
+                "200": {
+                "description": "Successful response",
+                "content": {
+                    "application/json":{
+                        "schema":{
+                            "type": "array",
+                            "items": {
+                            "$ref": "#/components/schemas/User"                               
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    },
+    "components": {
+        "schemas":{
+            "User": {
+                "type": "object",
+                "properties": {
+                  "id": {"type": "integer"},
+                  "username": {"type": "string"},
+                  "email": {"type": "string"}
+                }
+              },
+            "DashboardItem": {
+                "type": "object",
+                "properties": {
+                  "id": {"type": "integer"},
+                  "title": {"type": "string"},
+                  "value": {"type": "string"},
+                  "description": {"type": "string"}
+                }
+              }
+
+        }
+    
+    }
+    
+}
