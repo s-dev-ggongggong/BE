@@ -5,7 +5,7 @@ from models.training import Training
 from models.models import AuthToken, Url
 from models.dashboard import DashboardItem, Table,Chart
 from extensions import ma, db, session_scope
-
+import json
 from models.schemas import  (user_schema, users_schema, 
     training_schema, trainings_schema, 
     emails_schema, 
@@ -37,14 +37,14 @@ def add_user():
 
     new_user =User(username=username,email=email,password_hash=password)
 
-    db.extensions.add(new_user)
+    db.session.add(new_user)
     db.session.commit()
     return user_schema.jsonify(new_user)
 
 @routes.route('/training', methods=['POST'])
 def create_training():
     data = request.json
-    
+    print("Retrieve",data)
     if not data:
         return jsonify({"message": "No input data provided"}), 400
     
@@ -75,41 +75,51 @@ def create_training():
         db.session.rollback()
         return jsonify({"message": "An error occurred while creating the training"}), 500
 
-@routes.route('/training/bulk',methods=['POST'])
+@routes.route('/training/bulk', methods=['POST'])
 def create_trainings_bulk():
-    try: 
-        data=request.json
-        new_trainings=[]
+    try:
+        data = request.get_json()
+        print("Received data:", data)  # Debugging: print the received data
+
+        trainings = []
         for training_data in data:
+            # Debugging: Check if 'maxPhishingMail' exists and is spelled correctly
+            if 'maxPhishingMail' not in training_data:
+                return jsonify({"error": "Key 'maxPhishingMail' is missing or misspelled"}), 400
+
             new_training = Training(
                 trainingName=training_data['trainingName'],
-                trainingDesc=training_data['trainingDesc'],
+                trainingDesc=training_data.get('trainingDesc', ''),
                 trainingStart=training_data['trainingStart'],
                 trainingEnd=training_data['trainingEnd'],
                 resourceUser=training_data['resourceUser'],
-                maxPhishingamil=training_data['maxPhishingamil']
+                maxPhishingMail=training_data['maxPhishingMail']
             )
-            new_trainings.append(new_training)
+            trainings.append(new_training)
 
-        with session_scope() as session:
-            session.bulk_save_objects(new_trainings)
-        return jsonify({"message":f"{len(new_trainings)} training success!" }),201
-    
+        db.session.bulk_save_objects(trainings)
+        db.session.commit()
+        return jsonify({"message": f"{len(trainings)} trainings successfully added!"}), 201
+
     except Exception as e:
-        return jsonify({"error":str(e)}),400
-    
+        db.session.rollback()
+        print(f"Error inserting data into DB: {e}")
+        return jsonify({"error": str(e)}), 500
 
 @routes.route('/training',methods =['GET'])
 def get_trainings():
       try:
           all_trainings =Training.query.all()
-          result=  trainings_schema.dump(all_trainings)
+          print(f"Retrieved trainings: {all_trainings}")
+          result= trainings_schema.dump(all_trainings)
+          print(f"Serialized result: {result}") 
           return jsonify(result),200
       except Exception as e :
+            print(f"Error retrieving trainings: {str(e)}")
             return jsonify({"message": "An error occurred while retrieving trainings"}), 500
 
 
-@routes.route('/dasdhboard',methods =["GET"])
+@routes.route('/dashboard',methods =["GET"])
 def get_dashboard():
      try:
           total_trainings= Training.query.count()

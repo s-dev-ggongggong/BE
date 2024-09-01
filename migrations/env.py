@@ -68,7 +68,7 @@ def run_migrations_offline():
         url=url, target_metadata=get_metadata(), literal_binds=True
     )
 
-    with context.gin_transaction():
+    with context.begin_transaction():
         context.run_migrations()
 
 
@@ -103,7 +103,7 @@ def run_migrations_online():
             **conf_args
         )
 
-        with context.gin_transaction():
+        with context.begin_transaction():
             context.run_migrations()
 
 

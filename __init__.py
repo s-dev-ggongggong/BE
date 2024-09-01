@@ -59,9 +59,7 @@ def create_app():
 
     app.register_blueprint(routes)
 
-    # if app.config.get('DEBUG'):
-    #     app.run(debug=True, port=app.config.get('PORT',8000))
-    
+
     return app
 
 

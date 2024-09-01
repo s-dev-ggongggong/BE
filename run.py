@@ -15,12 +15,12 @@ def create_app_wrapper():
     app= create_app()
     migrate = Migrate(app,db)
     return app
+cli = FlaskGroup(create_app=create_app_wrapper)
 
 
 #cli =FlaskGroup(create_app=create_app_wrapper)
 app = create_app_wrapper()
 
-# migrate =Migrate(app,db)
 
 @app.cli.command('dev')
 @click.option('--port', default=8000, help='Port to run the server on')
@@ -35,4 +35,5 @@ def dev_cmd(port):
 # app.cli.add_command(dev_cmd)
 
 if __name__ == '__main__':
-    app.run(debug=True, port=8000)
+    #app.run(debug=True, port=8000)
+    cli()

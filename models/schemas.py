@@ -37,11 +37,20 @@ class DashboardItemSchema(ma.SQLAlchemyAutoSchema):
     class Meta:
         model = DashboardItem
 
-class TrainingSchema(ma.Schema):
+class TrainingSchema(ma.SQLAlchemyAutoSchema):
     class Meta:
         model=Training
-        fields=("id","trainingName","trainingDesc","trainingStart","trainigEnd","resourceUser","maxPhishingamil")
-    
+        include_fk =True
+        load_instance = True
+
+        id =fields.Int(dump_only=True)
+        trainingName = fields.Str(required=True)
+        trainingDesc = fields.Str(required=True)
+        trainingStart = fields.DateTime(format="%Y-%m-%d")
+        trainingEnd = fields.DateTime(format="%Y-%m-%d")
+        resourceUser = fields.Int(required=True)
+        maxPhishingMail = fields.Int()
+      
 class EmailSchema(ma.SQLAlchemyAutoSchema):
     class Meta:
         model = Email

@@ -9,26 +9,61 @@ on:
       - main
 jobs:
   build:
-    runs-on: amazon-linux
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
 
-    services:
-      db:
-        image: sqlite:3.46.1
-        env:
-
-          SQLITE_DB: e_sol
-        uses: actions/checkout@v2
-
-      - name: Setup flask.py
-        uses: actions/setup-node@v2
+      - name: Install ssh key for bastion
+        uses: shimataro/ssh-key-action@v2
         with:
-          node-version: '14'
+          aws-access-key-id: ${{secrets.EC2_SSH_PRIVATE_KEY}}
+          aws-secret-access-key: ${{secrets.AWS_SECRET_ACCESS_KEY}}
+          aws-region: ap-northeast-2
+      - name: Deploy to EC2
+        env:
+          BASTION_HOST: ${{secrets.BST_HOST}}
+          BASTION_USER: ec2-user
+          BASTION_PRIVATE_IP: ${{secrets.BST_PRIV}}
+          PRIVATE_EC2_HOST: ${{secrets.E_BACK}}
+          PRIVTATE_EC2_USER: ec2-user
+          PRIVATE_KEY: ${{secrets.EC2_SSH_PRIVATE_KEY}}
+        run: |
+          echo "$PRIVATE_KEY" > private_key && chmod 600 private_key
 
-      - name: Install dependencies
-        run: npm install
+          ssh -f -N -L 2222:$PRIVATE_EC2_HOST:22 $BASTION_USER@$BASTION_HOST
 
-      - name: Run tests
-        run: npm test
+          sleep 5
 
-      - name: Build application
-        run: npm run build
+          ssh -o StrictHostKeyChecking=no -p 2222 -i private_ec2_key $PRIVATE_EC2_USER@localhost '
+
+            sudo yum update -y
+            sudo yum install -y python3 python3-pip sqlite
+
+            cd ./BE
+
+            python3 -m venv venv
+            source venv/bin/activate
+
+            pip3 install --user -r requirements.txt
+            
+
+            if[! -f db/e_sol.db] ; then
+              sqlite3 db/e_sol.db <schema.sql
+            fi
+
+            export FLASK_APP=run.py
+            flask db updarade
+
+            if pgrep -f 'flask run ' > /dev/null
+            then
+              echo "Flask runing already .Restart"
+              pkill -f "flask run"
+            fi
+
+            nohup flask run --host=0.0.0.0 > flask.log 2>&1 &
+            echo "Flask server start"
+          pkill -f "ssh -f -N -L 2222:$PRIVATE_EC2_HOST:22"
+
+      - name: Clean up
+        if: always()
+        run: rm -f private_ec2_key

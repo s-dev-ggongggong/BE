@@ -324,7 +324,6 @@
           }
         }
       },
-
       "DashboardItem": {
         "type": "object",
         "properties": {
