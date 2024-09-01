@@ -5,7 +5,8 @@ from marshmallow import fields
 class DashboardItem(db.Model):
 
     __tablename__='dashboard_items'
-
+    __table_args__={'extend_existing':True}
+    
     id = db.Column(db.Integer, primary_key=True)
     title = db.Column(db.String(120), nullable=False)
     value = db.Column(db.String(120), nullable=False)
@@ -19,11 +20,17 @@ class DashboardItem(db.Model):
     def __repr__(self):
         return f'<DashboardItem {self.title}>'
 class Form(db.Model):
+    __tablename__ = 'form'
+    __table_args__={'extend_existing':True}
+    
     id = db.Column(db.Integer, primary_key=True)
     form_name = db.Column(db.String(120), nullable=False)
     fields = db.relationship('FormField', backref='form', lazy=True)
 
 class FormField(db.Model):
+    __tablename__ = 'formField'
+    __table_args__={'extend_existing':True}
+
     id = db.Column(db.Integer, primary_key=True)
     form_id = db.Column(db.Integer, db.ForeignKey('form.id'), nullable=False)
     field_name = db.Column(db.String(120), nullable=False)
@@ -33,6 +40,9 @@ class FormField(db.Model):
         return f'<FormField {self.field_name} ({self.field_type})>'
 
 class Chart(db.Model):
+    __tablename__= 'chart'
+    __table_args__={'extend_existing':True}
+
     id = db.Column(db.Integer, primary_key=True)
     chart_type = db.Column(db.String(50), nullable=False)  # 예: 'Line', 'Bar', 'Pie'
     data = db.Column(db.Text, nullable=False)  # JSON 형태로 차트 데이터 저장
@@ -43,6 +53,9 @@ class Chart(db.Model):
 
 
 class Table(db.Model):
+    __tablename__= 'table'
+    __table_args__={'extend_existing':True}
+
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(120), nullable=False)
     columns = db.Column(db.Text, nullable=False)  # JSON 형태로 열 이름 저장
@@ -52,6 +65,9 @@ class Table(db.Model):
         return f'<Table {self.name}>'
 
 class Widget(db.Model):
+    __tablename__= 'widget'
+    __table_args__={'extend_existing':True}
+
     id = db.Column(db.Integer, primary_key=True)
     widget_type = db.Column(db.String(50), nullable=False)  # 예: 'Card', 'Banner', 'Chart'
     settings = db.Column(db.Text, nullable=True)  # JSON 형태로 위젯 설정 저장

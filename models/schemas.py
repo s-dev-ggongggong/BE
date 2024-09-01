@@ -39,9 +39,8 @@ class DashboardItemSchema(ma.SQLAlchemyAutoSchema):
 
 class TrainingSchema(ma.Schema):
     class Meta:
-         fields=("id","trainingName","trainingDesc","trainingStart","trainigEnd","resourceUser","maxPhishingamil")
-    trainingstart =fields.Date(format="%Y-%m-%d")
-    trainingEnd= fields.Date(format="%Y-%m-%d")
+        model=Training
+        fields=("id","trainingName","trainingDesc","trainingStart","trainigEnd","resourceUser","maxPhishingamil")
     
 class EmailSchema(ma.SQLAlchemyAutoSchema):
     class Meta:
@@ -57,6 +56,8 @@ class UrlSchema(ma.SQLAlchemyAutoSchema):
         model = Url
 
 # Schema instances
+trainingstart =fields.Date(format="%Y-%m-%d")
+trainingEnd= fields.Date(format="%Y-%m-%d")
  
 
 user_schema = UserSchema()

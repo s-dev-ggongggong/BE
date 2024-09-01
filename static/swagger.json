@@ -320,7 +320,7 @@
           },
           "maxPhisingMail": {
             "type": "integer",
-            "description": "maximum number of phising emials"
+            "description": "maximum numr of phising emials"
           }
         }
       },

@@ -1,5 +1,5 @@
 import json
-from app import create_app,db
+from  import create_app,db
 from models.models import User, DashboardItem, Email, Training
 from datetime import datetime
 
@@ -22,7 +22,7 @@ def populate_database():
 
         # Insert Dashboard Items
         dashboard_items = [
-            {"title": "Total Users", "value": "1000", "description": "Number of registered users"},
+            {"title": "Total Users", "value": "1000", "description": "Numr of registered users"},
             {"title": "Active Users", "value": "750", "description": "Users active in the last 30 days"}
         ]
         for item_data in dashboard_items:

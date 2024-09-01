@@ -1,4 +1,8 @@
-# New Project 
+# run back server
+
+flask run
+
+# db migrate(update)
 
 # JSON_FORMAT
 
