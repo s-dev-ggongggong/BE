@@ -8,7 +8,8 @@
   "paths": {
     "/user": {
       "post": {
-        "summary": "create a new user",
+        "tags": ["User"],
+        "summary": "Create a new user",
         "requestBody": {
           "required": true,
           "content": {
@@ -19,9 +20,9 @@
             }
           }
         },
-        "response": {
+        "responses": {
           "200": {
-            "description": "Users created success",
+            "description": "User created successfully",
             "content": {
               "application/json": {
                 "schema": {
@@ -34,6 +35,7 @@
       },
       "get": {
         "summary": "Get all users",
+        "tags": ["User"],
         "responses": {
           "200": {
             "description": "Successful response",
@@ -53,12 +55,13 @@
     },
     "/user/{id}": {
       "get": {
+        "tags": ["User"],
         "summary": "Get a user by Id",
         "parameters": [
           {
             "name": "id",
             "in": "path",
-            "requireed": true,
+            "required": true,
             "schema": {
               "type": "integer"
             }
@@ -78,6 +81,7 @@
         }
       },
       "put": {
+        "tags": ["User"],
         "summary": "Update a user",
         "parameters": [
           {
@@ -113,6 +117,7 @@
         }
       },
       "delete": {
+        "tags": ["User"],
         "summary": "Delete a user",
         "parameters": [
           {
@@ -138,11 +143,11 @@
         }
       }
     },
-    "/training": {
+    "/training/create": {
       "post": {
-        "summary": "craete new training empty array",
+        "summary": "Create a new training",
         "tags": ["Training"],
-        "RequestBody": {
+        "requestBody": {
           "required": true,
           "content": {
             "application/json": {
@@ -152,7 +157,7 @@
             }
           }
         },
-        "response": {
+        "responses": {
           "201": {
             "description": "Created",
             "content": {
@@ -184,11 +189,13 @@
             }
           }
         }
-      },
+      }
+    },
+    "/training/read": {
       "get": {
         "summary": "Get all training",
         "tags": ["Training"],
-        "response": {
+        "responses": {
           "200": {
             "description": "Success response",
             "content": {
@@ -215,26 +222,112 @@
         }
       }
     },
-    "/dashboard_item": {
-      "post": {
-        "summary": "create a new dashboard item",
-        "RequestBody": {
+    "/training/update": {
+      "put": {
+        "summary": "Update an existing training",
+        "tags": ["Training"],
+        "requestBody": {
           "required": true,
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/DashbaordItem"
+                "$ref": "#/components/schemas/TrainingUpdate"
               }
             }
           }
         },
-        "response": {
+        "responses": {
           "200": {
-            "description": "User deleted successfully",
+            "description": "Successfully updated",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/User"
+                  "$ref": "#/components/schemas/Training"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Training not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/training/drop": {
+      "delete": {
+        "summary": "Delete a training",
+        "tags": ["Training"],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Training deleted successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Training"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/dashboard_item": {
+      "post": {
+        "summary": "Create a new dashboard item",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DashboardItem"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Dashboard item created successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DashboardItem"
                 }
               }
             }
@@ -242,14 +335,17 @@
         }
       },
       "get": {
-        "summary": "Get all dashbaord items",
+        "summary": "Get all dashboard items",
         "responses": {
           "200": {
-            "description": "User deleted successfully",
+            "description": "Successful response",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/User"
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/DashboardItem"
+                  }
                 }
               }
             }
@@ -259,6 +355,7 @@
     },
     "/users": {
       "get": {
+        "tags": ["User"],
         "summary": "Returns a list of users",
         "responses": {
           "200": {
@@ -299,28 +396,53 @@
         "properties": {
           "id": {
             "type": "integer",
-            "readOnly": "true",
+            "readOnly": true,
             "description": "The auto-generated id of the training"
           },
           "trainingName": { "type": "string", "description": "Name" },
           "trainingDesc": { "type": "string", "description": "Description" },
-          "traningStart": {
+          "trainingStart": {
             "type": "string",
             "format": "date",
             "description": "Start date of training (YYYY-MM-DD)"
           },
           "trainingEnd": {
             "type": "string",
-            "foramt": "date",
-            "description": "End date of trainign (YYYY-MM-DD)"
+            "format": "date",
+            "description": "End date of training (YYYY-MM-DD)"
           },
           "resourceUser": {
             "type": "integer",
             "description": "choose random resource users from data"
           },
-          "maxPhisingMail": {
+          "maxPhishingMail": {
             "type": "integer",
-            "description": "maximum numr of phising emials"
+            "description": "Maximum number of phishing emails"
+          }
+        }
+      },
+      "TrainingUpdate": {
+        "type": "object",
+        "properties": {
+          "trainingName": { "type": "string", "description": "Name" },
+          "trainingDesc": { "type": "string", "description": "Description" },
+          "trainingStart": {
+            "type": "string",
+            "format": "date",
+            "description": "Start date of training (YYYY-MM-DD)"
+          },
+          "trainingEnd": {
+            "type": "string",
+            "format": "date",
+            "description": "End date of training (YYYY-MM-DD)"
+          },
+          "resourceUser": {
+            "type": "integer",
+            "description": "choose random resource users from data"
+          },
+          "maxPhishingMail": {
+            "type": "integer",
+            "description": "Maximum number of phishing emails"
           }
         }
       },

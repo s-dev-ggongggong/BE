@@ -1,0 +1,12 @@
+[
+  {
+    "title": "Total Users",
+    "value": "1000",
+    "description": "Number of registered users"
+  },
+  {
+    "title": "Active Users",
+    "value": "750",
+    "description": "Users active in the last 30 days"
+  }
+]

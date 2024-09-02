@@ -5,7 +5,11 @@
     "trainingStart": "2023-08-01",
     "trainingEnd": "2023-08-31",
     "resourceUser": 1,
-    "maxPhishingMail": 5
+    "maxPhishingMail": 5,
+    "status": "completed",
+    "department": "IT Security",
+    "agentStartDate": null,
+    "agentId": null
   },
   {
     "trainingName": "Advanced Phishing Techniques",
@@ -13,7 +17,11 @@
     "trainingStart": "2023-09-01",
     "trainingEnd": "2023-09-30",
     "resourceUser": 2,
-    "maxPhishingMail": 10
+    "maxPhishingMail": 10,
+    "status": "completed",
+    "department": "Cybersecurity",
+    "agentStartDate": null,
+    "agentId": null
   },
   {
     "trainingName": "Phishing Awareness",
@@ -21,7 +29,11 @@
     "trainingStart": "2024-09-01",
     "trainingEnd": "2024-09-10",
     "resourceUser": 3,
-    "maxPhishingMail": 5
+    "maxPhishingMail": 5,
+    "status": "pending",
+    "department": "General Staff",
+    "agentStartDate": null,
+    "agentId": null
   },
   {
     "trainingName": "Password Security",
@@ -29,6 +41,10 @@
     "trainingStart": "2024-09-15",
     "trainingEnd": "2024-09-20",
     "resourceUser": 10,
-    "maxPhishingMail": 3
+    "maxPhishingMail": 3,
+    "status": "pending",
+    "department": "All Departments",
+    "agentStartDate": null,
+    "agentId": null
   }
 ]

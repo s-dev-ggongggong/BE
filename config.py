@@ -11,3 +11,6 @@ class Config:
     SWAGGER_CONFIG = {
         'app_name': "Email Test Server"
     }
+    IMAP_SERVER = '10.0.10.162'
+    USERNAME = 'test4'
+    PASSWORD = 'igloo1234'

@@ -30,10 +30,7 @@ def dev_cmd(port):
     os.environ['FLASK_ENV']= 'development'
     os.environ['FLASK_DEBUG']= '1'
     click.echo("To run the server, use: flask run --port {port}")
-    # app=create_app_wrapper()
-    # app.run(debug=True,port=port)
-# app.cli.add_command(dev_cmd)
 
 if __name__ == '__main__':
-    #app.run(debug=True, port=8000)
-    cli()
+    app.run(debug=True, port=8000)
+    c#li()

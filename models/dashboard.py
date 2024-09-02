@@ -19,32 +19,12 @@ class DashboardItem(db.Model):
 
     def __repr__(self):
         return f'<DashboardItem {self.title}>'
-class Form(db.Model):
-    __tablename__ = 'form'
-    __table_args__={'extend_existing':True}
-    
-    id = db.Column(db.Integer, primary_key=True)
-    form_name = db.Column(db.String(120), nullable=False)
-    fields = db.relationship('FormField', backref='form', lazy=True)
-
-class FormField(db.Model):
-    __tablename__ = 'formField'
-    __table_args__={'extend_existing':True}
-
-    id = db.Column(db.Integer, primary_key=True)
-    form_id = db.Column(db.Integer, db.ForeignKey('form.id'), nullable=False)
-    field_name = db.Column(db.String(120), nullable=False)
-    field_type = db.Column(db.String(50), nullable=False)  # 예: 'text', 'checkbox', 'radio'
-
-    def __repr__(self):
-        return f'<FormField {self.field_name} ({self.field_type})>'
-
 class Chart(db.Model):
     __tablename__= 'chart'
     __table_args__={'extend_existing':True}
 
     id = db.Column(db.Integer, primary_key=True)
-    chart_type = db.Column(db.String(50), nullable=False)  # 예: 'Line', 'Bar', 'Pie'
+    chartType = db.Column(db.String(50), nullable=False)  # 예: 'Line', 'Bar', 'Pie'
     data = db.Column(db.Text, nullable=False)  # JSON 형태로 차트 데이터 저장
     options = db.Column(db.Text, nullable=True)  # JSON 형태로 차트 옵션 저장
 
@@ -69,9 +49,9 @@ class Widget(db.Model):
     __table_args__={'extend_existing':True}
 
     id = db.Column(db.Integer, primary_key=True)
-    widget_type = db.Column(db.String(50), nullable=False)  # 예: 'Card', 'Banner', 'Chart'
+    widgetType = db.Column(db.String(50), nullable=False)  # 예: 'Card', 'Banner', 'Chart'
     settings = db.Column(db.Text, nullable=True)  # JSON 형태로 위젯 설정 저장
 
     def __repr__(self):
-        return f'<Widget {self.widget_type}>'
+        return f'<Widget {self.widgetType}>'
 
