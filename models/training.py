@@ -8,17 +8,17 @@ class Training(db.Model):
     __table_args__ = {'extend_existing': True}
 
     id = db.Column(db.Integer, primary_key=True)
-    trainingName = db.Column(db.String(100), nullable=False)
-    trainingDesc = db.Column(db.Text, nullable=False)
-    trainingStart = db.Column(db.Date, nullable=False)
-    trainingEnd = db.Column(db.Date, nullable=False)
-    resourceUser = db.Column(db.Integer, nullable=False)
-    maxPhishingMail = db.Column(db.Integer, nullable=False)
+    training_name = db.Column(db.String(100), nullable=False)
+    training_desc = db.Column(db.Text, nullable=False)
+    training_start = db.Column(db.Date, nullable=False)
+    training_end = db.Column(db.Date, nullable=False)
+    resource_user = db.Column(db.Integer, nullable=False)
+    max_phishing_mail = db.Column(db.Integer, nullable=False)
     status = db.Column(db.String(20), nullable=False)
-    agentStartDate = db.Column(db.Date, nullable=True)
+    agent_startDate = db.Column(db.Date, nullable=True)
     department = db.Column(db.String(50), nullable=False)
-    createdAt = db.Column(db.DateTime, default=datetime.utcnow)
-    updatedAt = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
     agent_id = db.Column(db.Integer, db.ForeignKey('agents.id'), nullable=True)
     employee_id = db.Column(db.Integer, db.ForeignKey('employees.id'), nullable=True)
@@ -27,19 +27,19 @@ class Training(db.Model):
     employee = db.relationship('Employee', back_populates='trainings', lazy='select')
     event_logs = db.relationship('EventLog', back_populates='training', lazy='dynamic')
 
-    def __init__(self, trainingName, trainingDesc, trainingStart, trainingEnd,
-                 resourceUser, maxPhishingMail, status, department, employee_id=None,
-                 agentStartDate=None, agent_id=None):
+    def __init__(self, training_name, training_desc, training_start, training_end,
+                 resource_user, max_phishing_mail, status, department, employee_id=None,
+                 agent_startDate=None, agent_id=None):
                  
-        self.trainingName = trainingName
-        self.trainingDesc = trainingDesc
-        self.trainingStart = self._parse_date(trainingStart)
-        self.trainingEnd = self._parse_date(trainingEnd)
-        self.resourceUser = resourceUser
-        self.maxPhishingMail = maxPhishingMail
+        self.training_name = training_name
+        self.training_desc = training_desc
+        self.training_start = self._parse_date(training_start)
+        self.training_end = self._parse_date(training_end)
+        self.resource_user = resource_user
+        self.max_phishing_mail = max_phishing_mail
         self.set_status(status)
         self.department = department
-        self.agentStartDate = self._parse_date(agentStartDate) if agentStartDate else None
+        self.agent_startDate = self._parse_date(agent_startDate) if agent_startDate else None
         self.agent_id = agent_id
         self.employee_id = employee_id
 
@@ -62,16 +62,16 @@ class Training(db.Model):
     def to_dict(self):
         return {
             'id': self.id,
-            'trainingName': self.trainingName,
-            'trainingDesc': self.trainingDesc,
-            'trainingStart': self.trainingStart.isoformat(),
-            'trainingEnd': self.trainingEnd.isoformat(),
-            'resourceUser': self.resourceUser,
-            'maxPhishingMail': self.maxPhishingMail,
+            'training_name': self.training_name,
+            'training_desc': self.training_desc,
+            'training_start': self.training_start.isoformat(),
+            'training_end': self.training_end.isoformat(),
+            'resource_user': self.resource_user,
+            'max_phishing_mail': self.max_phishing_mail,
             'status': self.status,
             'department': self.department,
-            'agentStartDate': self.agentStartDate.isoformat() if self.agentStartDate else None,
-            'createdAt': self.createdAt.isoformat(),
-            'updatedAt': self.updatedAt.isoformat(),
+            'agent_startDate': self.agent_startDate.isoformat() if self.agent_startDate else None,
+            'created_at': self.created_at.isoformat(),
+            'updated_at': self.updated_at.isoformat(),
             'agent_id': self.agent_id,
             'employee_id': self.employee_id}
