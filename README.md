@@ -13,15 +13,35 @@
 
 - set FLASK_APP=run.py
 
-# debug back server
-
-flask dev --port 8000
-
 # requirements
 
 pypreqs '../BE'
 
-# db migrate(update)
+# db migrate
+
+[DBBROWSER등 db_client 서버 끄고 진행]
+flask db init
+flask db migrate -m "Initial migration"
+flask db upgrade
+
+# db 초기화
+
+rm -rf migrations
+rm -rf migrations/\*
+
+# db migration error
+
+- migrations/versions 내 생기는 config 파일 프롬프트 수정
+
+# script 이용한 json 업로드
+
+python -m scripts.load_emails
+
+# 서버 에러 터질때
+
+1. $ find . -name "**pycache**" -exec rm -rf {} +
+2. $ find . -name ".pyc" -delete
+3. export FLASK_APP =run.py || set FLASK_APP =run.py
 
 # KEY
 

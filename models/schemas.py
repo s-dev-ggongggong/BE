@@ -1,155 +1,132 @@
-from extensions import db, ma
-from marshmallow import fields, validate
-from models.dashboard import DashboardItem, Chart, Table, Widget
-from models.email import Email
-from models.user import User
-from models.training import Training
-from models.models import Url, AuthToken, Form, FormField
-from models.agent import Agent
+from extensions import ma
+from marshmallow import fields
+from models import Department, Employee, Role, Training, Agent,AgentLog, EventLog, Form, FormField, Email, AuthToken, Url, DashboardItem
 
-
-# Form Schema
-class FormSchema(ma.SQLAlchemyAutoSchema):
+class Base(ma.SQLAlchemyAutoSchema):
     class Meta:
-        model = Form
-    fields = fields.Nested('FormFieldSchema', many=True)
+        include_fk = True
+        load_instance = True
+        include_relationships = True
 
-# Form Field Schema
-class FormFieldSchema(ma.SQLAlchemyAutoSchema):
-    class Meta:
+class DepartmentSchema(Base):
+    class Meta(Base.Meta):
+        model = Department
+
+class RoleSchema(Base):
+    class Meta(Base.Meta):
+        model = Role
+
+class TrainingSchema(Base):
+    class Meta(Base.Meta):
+        model = Training
+    employee = fields.Nested('EmployeeSchema', exclude=('trainings',), dump_only=True)
+    event_logs = fields.List(fields.Nested('EventLogSchema', exclude=('training',)), dump_only=True)
+    agent_id = fields.Int(data_key='agentId',allow_none=True)
+
+class EmployeeSchema(Base):
+    class Meta(Base.Meta):
+        model = Employee
+        exclude = ('password_hash',)
+    trainings = fields.List(fields.Nested(TrainingSchema, exclude=('employee',)), dump_only=True)
+    event_logs = fields.List(fields.Nested('EventLogSchema', exclude=('employee',)), dump_only=True)
+
+class AgentSchema(Base):
+    class Meta(Base.Meta):
+        model = Agent
+class AgentLogSchema(Base):
+    class Meta(Base.Meta):
+        model = AgentLog
+
+class EventLogSchema(Base):
+    class Meta(Base.Meta):
+        model = EventLog
+
+class FormFieldSchema(Base):
+    class Meta(Base.Meta):
         model = FormField
 
-# Chart Schema
-class ChartSchema(ma.SQLAlchemyAutoSchema):
-    class Meta:
-        model = Chart
+class FormSchema(Base):
+    class Meta(Base.Meta):
+        model = Form
+    fields = fields.Nested(FormFieldSchema, many=True)
 
-# Table Schema
-class TableSchema(ma.SQLAlchemyAutoSchema):
-    class Meta:
-        model = Table
-
-# Widget Schema
-class WidgetSchema(ma.SQLAlchemyAutoSchema):
-    class Meta:
-        model = Widget
-
-# Dashboard Item Schema
-class DashboardItemSchema(ma.SQLAlchemyAutoSchema):
-    class Meta:
-        model = DashboardItem
-
-
-# User Schema
-class UserSchema(ma.SQLAlchemyAutoSchema):
-    class Meta:    
-        model = User
-        include_fk = True
-        load_instance = True
-
-    trainings = fields.List(fields.Nested('TrainingSchema', exclude=('user',)), dump_only=True)
-
-        
-
-# Training Schema
-
-class TrainingSchema(ma.SQLAlchemyAutoSchema):
-    class Meta:
-        model = Training
-        include_fk = True
-        load_instance = True
-
-    user = fields.Nested('UserSchema', exclude=('trainings',), dump_only=True)
-
-
-    id = fields.Integer(dump_only=True)
-    trainingName = fields.String(required=True)
-    trainingDesc = fields.String(required=True)
-    trainingStart = fields.Date(required=True)
-    trainingEnd = fields.Date(required=True)
-    resourceUser = fields.Integer(required=True)
-    maxPhishingMail = fields.Integer(required=True)
-    status = fields.String(required=True)
-    department = fields.String(required=True)
-    agentStartDate = fields.Date(allow_none=True)
-    createdAt = fields.DateTime(dump_only=True)
-    updatedAt = fields.DateTime(dump_only=True)
-    agentId = fields.Integer(allow_none=True)
-    userId = fields.Integer(attribute='userId')
-    
-
-
-
-
-
-# Email Schema
-class EmailSchema(ma.SQLAlchemyAutoSchema):
-    class Meta:
+class EmailSchema(Base):
+    class Meta(Base.Meta):
         model = Email
-        include_fk = True  # Include foreign key fields if they exist
-        load_instance = True  # Deserialize to model instances
 
-class EmailLogSchema(ma.SQLAlchemyAutoSchema):
-    class Meta:
-        model = Email
-        include_fk = True  # Include foreign key fields if they exist
-        load_instance = True 
-# Auth Token Schema
-class AuthTokenSchema(ma.SQLAlchemyAutoSchema):
-    class Meta:
+class AuthTokenSchema(Base):
+    class Meta(Base.Meta):
         model = AuthToken
 
-# URL Schema
-class UrlSchema(ma.SQLAlchemyAutoSchema):
-    class Meta:
+class UrlSchema(Base):
+    class Meta(Base.Meta):
         model = Url
-class AgentSchema(ma.SQLAlchemyAutoSchema):
+
+
+class UserWithTrainingsSchema(Base):
+    trainings = fields.List(fields.Nested(TrainingSchema(exclude=('employee',))), dump_only=True)
+
+
+class TrainingWithUserSchema(Base):
+    user = fields.Nested(EmployeeSchema(exclude=('trainings',)), dump_only=True)
+
+class DashboardItemSchema(Base):
     class Meta:
-        model = Agent
-        include_relationships = True
-        load_instance = True
-
-class UserWithTrainingsSchema(UserSchema):
-    trainings = fields.List(fields.Nested(TrainingSchema(exclude=('user',))), dump_only=True)
-
-
-class TrainingWithUserSchema(TrainingSchema):
-    user = fields.Nested(UserSchema(exclude=('trainings',)), dump_only=True)
+        model = DashboardItem
+        
 
 # Schema instances
-trainings_with_users_schema = TrainingWithUserSchema(many=True)
-
-users_with_trainings_schema = UserWithTrainingsSchema(many=True)
-agent_schema = AgentSchema()
-agents_schema = AgentSchema(many=True)
-user_schema = UserSchema()
-users_schema = UserSchema(many=True)
-auth_token_schema = AuthTokenSchema()
-auth_tokens_schema = AuthTokenSchema(many=True)
-url_schema = UrlSchema()
-urls_schema = UrlSchema(many=True)
-emails_schema = EmailSchema(many=True)
-training_schema = TrainingSchema()
-trainings_schema = TrainingSchema(many=True)
-trainings_with_users_schema = TrainingWithUserSchema(many=True)
+users_with_trainings_schema = UserWithTrainingsSchema()
+trainings_with_users_schema = TrainingWithUserSchema()
 dashboard_item_schema = DashboardItemSchema()
 dashboard_items_schema = DashboardItemSchema(many=True)
+trainings_with_users_schema = TrainingWithUserSchema(many=True)
+users_with_trainings_schema = UserWithTrainingsSchema(many=True)
+
+department_schema = DepartmentSchema()
+departments_schema = DepartmentSchema(many=True)
+
+role_schema = RoleSchema()
+roles_schema = RoleSchema(many=True)
+
+employee_schema = EmployeeSchema()
+employees_schema = EmployeeSchema(many=True)
+
+training_schema = TrainingSchema()
+trainings_schema = TrainingSchema(many=True)
+
+agent_schema = AgentSchema()
+agents_schema = AgentSchema(many=True)
+agent_log_schema = AgentLogSchema()
+agent_logs_schema = AgentLogSchema(many=True)
+
+event_log_schema = EventLogSchema()
+event_logs_schema = EventLogSchema(many=True)
+
 form_schema = FormSchema()
 forms_schema = FormSchema(many=True)
-form_field_schema = FormFieldSchema()
-form_fields_schema = FormFieldSchema(many=True)
-chart_schema = ChartSchema()
-charts_schema = ChartSchema(many=True)
-table_schema = TableSchema()
-tables_schema = TableSchema(many=True)
-widget_schema = WidgetSchema()
-widgets_schema = WidgetSchema(many=True)
+
+email_schema = EmailSchema()
+emails_schema = EmailSchema(many=True)
+
+auth_token_schema = AuthTokenSchema()
+auth_tokens_schema = AuthTokenSchema(many=True)
+
+url_schema = UrlSchema()
+urls_schema = UrlSchema(many=True)
 
 # Export all schemas
 __all__ = [
-    'user_schema', 'users_schema', 'auth_token_schema', 'auth_tokens_schema',
-    'url_schema', 'urls_schema', 'emails_schema', 'training_schema', 'trainings_schema',
-    'dashboard_item_schema', 'dashboard_items_schema', 'form_schema', 'forms_schema',
-    'form_field_schema', 'form_fields_schema', 'chart_schema', 'charts_schema',
-    'table_schema', 'tables_schema', 'widget_schema', 'widgets_schema','agent_schema', 'agents_schema'  
+    'department_schema', 'departments_schema',
+    'role_schema', 'roles_schema',
+    'employee_schema', 'employees_schema',
+    'training_schema', 'trainings_schema',
+    'agent_schema', 'agents_schema',
+    'event_log_schema', 'event_logs_schema',
+    'form_schema', 'forms_schema',
+    'email_schema', 'emails_schema',
+    'auth_token_schema', 'auth_tokens_schema',
+    'url_schema', 'urls_schema','dashboard_items_schema',
+    'users_with_trainings_schema', 'trainings_with_users_schema',
+    'agent_log_schema','agent_logs_schema'
 ]

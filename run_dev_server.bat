@@ -1,2 +1,4 @@
 @echo off
-flask --app run run --debug --port 8000
+set FLASK_APP=run.py
+set FLASK_ENV=development
+flask run --port 8000

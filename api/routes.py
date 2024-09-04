@@ -1,226 +1,217 @@
 from flask import Blueprint, request, jsonify
-from models.training import Training
-from models.user import User
-from models.email import Email
-from models.dashboard import DashboardItem
-from models.agent import AgentLog
 from extensions import db, ma, session_scope
 from marshmallow import ValidationError
-import random ,csv 
+import random, csv 
 from datetime import datetime
 import traceback
-from models.schemas import users_with_trainings_schema ,trainings_with_users_schema
+from utils.utils import success_response,validate_training_data, create_training_record  
 
+# Import all necessary schemas and models
+from models.schemas import *
+from models import Employee, Training, EventLog, Form, AgentLog, Email, DashboardItem
 routes = Blueprint('training', __name__)
 
-# Import all necessary schemas
-from models.schemas import (
-    user_schema, users_schema, 
-    training_schema, trainings_schema, 
-    emails_schema, 
-    dashboard_item_schema, dashboard_items_schema
-)
 
 @routes.route('/')
 def home():
-    return "Welcom Email Test"
+    return "Welcome to Email Test"
 
-@routes.route('/users', methods=['GET'])
+@routes.route('/employees', methods=['GET'])
 def get_users():
-    users = User.query.all()
-    return users_schema.jsonify(users)
+    with session_scope() as session:
+        users = session.query(Employee).all()
+        return success_response(employees_schema.dump(users),status=200)
 
-@routes.route('/user/<id>', methods=['GET'])
+@routes.route('/employees/<int:id>', methods=['GET'])
 def get_user(id):
-    user = User.query.get(id)
-    return user_schema.jsonify(user)
+    with session_scope() as session:
+        user = session.query(Employee).get_or_404(id)
+        return jsonify(employee_schema.dump(user))
 
-@routes.route('/user',methods=['POST'])
+@routes.route('/employees', methods=['POST'])
 def add_user():
-    username=request.json['username']
-    email = request.json['email']
-    password=request.json['password']
+    try:
+        user_data = employee_schema.load(request.json)
+        with session_scope() as session:
+            new_user = Employee(**user_data)
+            session.add(new_user)
+            session.flush()
+            return jsonify(employee_schema.dump(new_user)), 201
+    except ValidationError as err:
+        return jsonify(err.messages), 400
 
-    new_user =User(username=username,email=email,password_hash=password)
-
-    db.session.add(new_user)
-    db.session.commit()
-    return user_schema.jsonify(new_user)
-
-@routes.route('/users/with-l', methods=['GET'])
+@routes.route('/users/with-training', methods=['GET'])
 def get_users_with_trainings():
     try:
-        all_users = User.query.all()
-        result = users_with_trainings_schema.dump(all_users)
-        return jsonify(result)
+        with session_scope() as session:
+            all_users = session.query(Employee).all()
+            result = users_with_trainings_schema.dump(all_users)
+            return jsonify(result)
     except Exception as e:
-        print(f"Error retrieving users with trainings: {str(e)}")
         return jsonify({"error": str(e), "message": "An error occurred while retrieving users with trainings"}), 500
-    
+#single
 @routes.route('/training/create', methods=['POST'])
 def create_training():
     data = request.json
-    print("Retrieve",data)
-    
     if not data:
         return jsonify({"message": "No input data provided"}), 400
+
     required_fields = ['trainingName', 'trainingDesc', 'trainingStart', 'trainingEnd', 'resourceUser', 'maxPhishingMail', 'status', 'department']
- 
     for field in required_fields:
         if field not in data:
             return jsonify({"message": f"Missing required field: {field}"}), 400
     
+    v_data, error = validate_training_data(data)
+    if error:
+        return jsonify(error),400
     try:
-        training_data = training_schema.load(data)
-        training_data.setdefault('maxPhishingMail', random.randint(1, 10))
-        training_data.setdefault('status', 'pending')
-        training_data.setdefault('department', '')
-
-        new_training = Training(**training_data)
-
-        db.session.add(new_training)
-        db.session.commit()
-
-    
-        return training_schema.jsonify(new_training), 201
- 
+        with session_scope() as session:
+            new_training, initial_event_log = create_training_record(v_data)
+            session.add(new_training)
+            session.add(initial_event_log)
+            session.commit()
+           
+            return jsonify(training_schema.dump(new_training)),201
     except ValidationError as err:
         return jsonify({"message": "Validation error", "errors": err.messages}), 400    
- 
-    except ValueError as e:
-        return jsonify({"message": str(e)}), 400
     except Exception as e:
-        db.session.rollback()
-        return jsonify({"message": "An error occurred while creating the training"}), 500
+        return jsonify({"message": "An error occurred while creating the training", "error": str(e)}), 500
 
-@routes.route('/training/bulk', methods=['POST'])
-def create_trainings_bulk():
+
+# single
+@routes.route('/training/read/<int:id>', methods=['GET'])
+def get_training(id):
     try:
-        data = request.get_json()
-        print("Received data:", data)  # Debugging: print the received data
-        validated_data = trainings_schema.load(data)
-
-        # Bulk insert using SQLAlchemy
-        db.session.bulk_save_objects(validated_data)
-        db.session.commit()   
-        return jsonify({"message": f"{len(validated_data)} trainings successfully added!"}), 201
-
-    except ValidationError as ve:
-        print(f"Validation error: {ve.messages}")
-        return jsonify({"error": "Validation error", "details": ve.messages}), 400
-
+        training = db.session.query(Training).filter_by(id=id).first()
+        if not training:
+            print(f"Query returned training: {training}")
+            return jsonify({"message": "Training not found"}), 404
+        return jsonify(training_schema.dump(training)), 200  # Single object, use `training_schema`
     except Exception as e:
-        db.session.rollback()
-        print(f"Error inserting data into DB: {e}")
+        return jsonify({"error": str(e), "message": "An error occurred while retrieving training"}), 500
+
+# many
+@routes.route('/training/bulk', methods=['POST'])
+def bulk_training():
+    data = request.json
+    v_data, error = validate_training_data(data,many=True)
+    try:
+        with session_scope() as session:
+            session.query(Training).delete()
+            for item in v_data:
+                new_training, initial_event_log = create_training_record(item)
+                session.add(new_training)    
+                session.add(initial_event_log)
+            
+            session.commit()
+            return jsonify({"message": f"{len(v_data)} trainings successfully added!"}), 201
+    except ValidationError as ve:
+        return jsonify({"error": "Validation error", "details": ve.messages}), 400
+    except Exception as e:
         return jsonify({"error": str(e)}), 500
 
+# bulk
 @routes.route('/training/read', methods=['GET'])
 def get_trainings():
     try:
-        all_trainings = Training.query.all()
-        result = trainings_with_users_schema.dump(all_trainings)
+        all_trainings = db.session.query(Training).all()
+        print(f"Check query returing data {all_trainings}")
+        result = trainings_schema.dump(all_trainings)
         return jsonify(result), 200
     except Exception as e:
-        db.session.rollback()
-        print(f"Error retrieving trainings: {str(e)}")
-        traceback.print_exc()
         return jsonify({"error": str(e), "message": "An error occurred while retrieving trainings"}), 500
 
 
-@routes.route('/dashboard/read',methods =["GET"])
+@routes.route('/forms', methods=['GET'])
+def get_forms():
+    with session_scope() as session:
+        forms = session.query(Form).all()
+        return jsonify(forms_schema.dump(forms))
+
+@routes.route('/forms/<int:id>', methods=['GET'])
+def get_form(id):
+    with session_scope() as session:
+        form = session.query(Form).get_or_404(id)
+        return jsonify(form_schema.dump(form))
+
+
+@routes.route('/emails/read', methods=['GET'])
+def get_emails():
+    with session_scope() as session:
+        emails = session.query(Email).all()
+        return jsonify(emails_schema.dump(emails))
+    
+#event log
+@routes.route('/training/view/<int:id>', methods=['GET'])
+def view_training_event_logs(id):
+    try:
+        event_logs = db.session.query(EventLog).filter_by(training_id=id).all()
+        if not event_logs:
+            return jsonify({"message": "No event logs found for the specified training ID"}), 404
+        
+        result = event_logs_schema.dump(event_logs)
+        return jsonify(result), 200
+    except Exception as e:
+        return jsonify({"error": str(e), "message": "An error occurred while retrieving event logs"}), 500
+
+# dash board bulk
+@routes.route('/dashboard/read', methods=["GET"])
 def get_dashboard():
-     try:
-          total_trainings= Training.query.count()
+    try:
+        with session_scope() as session:
+            total_trainings = session.query(Training).count()
+            avg_phishing_mails = session.query(db.func.avg(Training.maxPhishingMail)).scalar() or 0
 
-          def calculate_avg_phishing_mails():
-              with session_scope() as session:
-                  avg_phishing_mails=session.query(db.func.avg(Training.maxPhishingMail)).scalar() or 0
-                  print(f"Average Phishing Emailss : {avg_phishing_mails}")
-                  return avg_phishing_mails
-          avg_phishing_mails = calculate_avg_phishing_mails()
+            dashboard_items = [
+                DashboardItem(title="Total Trainings", value=str(total_trainings), description="Total number of trainings"),
+                DashboardItem(title="Avg Phishing Mails", value=f"{avg_phishing_mails:.2f}", description="Average number of phishing mails per training") 
+            ]
+            result = dashboard_items_schema.dump(dashboard_items)
+            return jsonify(result), 200
+    except Exception as e:
+        return jsonify({"message": "Error from Dashboard items", "error": str(e)}), 500
 
-          dashboard_items=[
-              DashboardItem(title="Total Trainings", value=str(total_trainings), description="Total numr of training"),
-              DashboardItem(title="Avg Phishing MAils", value=f"{avg_phishing_mails:.2f}", description="Average numr of phishing mails per training") 
-          ]
-          result= dashboard_item_schema.dump(dashboard_items)
-          return jsonify(result),200
-     
-     except Exception as e :
-        return jsonify({"message":"Error from DashBoard items"}),500
-
+# agent server 
 @routes.route('/agent/logs', methods=['POST'])
 def receive_logs():
     try:
-        logs = request.get_json()  # JSON 형식으로 로그 데이터를 받음
-        print(f"Received logs: {logs}")
-
+        logs = request.get_json()
         with session_scope() as session:
             for log_entry in logs:
-                agent_log = AgentLog(
-                    subject=log_entry["subject"],
-                    from_=log_entry["from"],
-                    body=log_entry["body"]
-                )
+                agent_log = AgentLog(**log_entry)
                 session.add(agent_log)
-            session.commit()
-
         return jsonify({"message": "Logs successfully stored"}), 201
     except Exception as e:
-        print(f"Error processing logs: {str(e)}")
-        return jsonify({"error": "Failed to store logs"}), 500
-
-@routes.route('/agent/upload_csv',methods=['POST'])
-def upload_csv():
-    if 'file' not in request.files:
-        return jsonify({"error":"No file part"}),400
-    
-    file =request.files['file']
-
-    if file.filename== '':
-        return jsonify({"error": "no selected file "}),400
-    
-    if file and file.filename.endswith('.csv'):
-        try:
-            with session_scope() as session:
-                csv_reader= csv.DictReader(file.stream)
-
-                for row in csv_reader:
-                    agent_log = AgentLog(
-                        timestamp=datetime.strptime(row['timestamp'], "%Y-%m-%d %H:%M:%S"),
-                        logLevel=row['logLevel'],
-                        process=row['process'],                       
-                        message=row['message']
-                    )
-                    session.add(agent_log)
-                session.commit()
-            return jsonify({"message":"CSV file successfully processed and data stored"}),201
-        except Exception as e :
-            print(f"Error process CSV {str(e)}")
-            return jsonify({"error":"Failed to process CSV file"}),500
-    else:
-        return jsonify({"error":"Invalid file format"}),400
-
+        return jsonify({"error": "Failed to store logs", "details": str(e)}), 500
 
 @routes.route('/agent/logs', methods=['GET'])
 def get_logs():
     try:
         with session_scope() as session:
             logs = session.query(AgentLog).all()
-            logs_json = [{
-                "timestamp": log.timestamp,
-                "logLevel": log.logLevel,
-                "process": log.process,
-                "message": log.message
-            } for log in logs]
-            
-        return jsonify(logs_json), 200
+            return jsonify(agent_logs_schema.dump(logs)), 200
     except Exception as e:
-        print(f"Error retrieving logs: {str(e)}")
-        return jsonify({"error": "Failed to retrieve logs"}), 500
+        return jsonify({"error": "Failed to retrieve logs", "details": str(e)}), 500
 
-
-@routes.route('/emails/read', methods=['GET'])
-def get_emails():
-    emails = Email.query.all()
-    return emails_schema.jsonify(emails)
+# upload csv
+@routes.route('/agent/upload_csv', methods=['POST'])
+def upload_csv():
+    if 'file' not in request.files:
+        return jsonify({"error": "No file part"}), 400
+    
+    file = request.files['file']
+    if file.filename == '':
+        return jsonify({"error": "No selected file"}), 400
+    
+    if file and file.filename.endswith('.csv'):
+        try:
+            csv_reader = csv.DictReader(file.stream.read().decode('utf-8').splitlines())
+            with session_scope() as session:
+                for row in csv_reader:
+                    agent_log = AgentLog(**row)
+                    session.add(agent_log)
+            return jsonify({"message": "CSV file successfully processed and data stored"}), 201
+        except Exception as e:
+            return jsonify({"error": "Failed to process CSV file", "details": str(e)}), 500
+    else:
+        return jsonify({"error": "Invalid file format"}), 400

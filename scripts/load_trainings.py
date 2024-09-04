@@ -19,11 +19,11 @@ def update_training_status():
         trainings = Training.query.all()
         for training in trainings:
             if training.trainingEnd < current_date:
-                training.status = 'completed'
+                training.status = 'FIN'
             elif training.trainingStart <= current_date <= training.trainingEnd:
-                training.status = 'in_progress'
+                training.status = 'RUN '
             else:
-                training.status = 'pending'
+                training.status = 'PLAN'
 
         db.session.commit()
 
@@ -63,13 +63,13 @@ def load_trainings(file_path):
             return
 
     print("Attempting to send data to API...")
-    try:
-        response = requests.post('http://localhost:8000/training/bulk', json=trainings_data, timeout=5)
-        print(f"API Response Status Code: {response.status_code}")
-        print("API Response:", response.json())
-        response.raise_for_status()
-    except requests.exceptions.RequestException as e:
-        print(f"API request error: {str(e)}")
+    # try:
+    #     response = requests.post('http://localhost:8000/training/bulk', json=trainings_data, timeout=5)
+    #     print(f"API Response Status Code: {response.status_code}")
+    #     print("API Response:", response.json())
+    #     response.raise_for_status()
+    # except requests.exceptions.RequestException as e:
+    #     print(f"API request error: {str(e)}")
 
     print("load_trainings function completed.")
 

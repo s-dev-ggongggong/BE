@@ -7,11 +7,13 @@ from run import create_app, db
 from models.email import Email
 from sqlalchemy.exc import OperationalError, IntegrityError
 from extensions import session_scope
+import chardet
+
 
 def load_json(file_path):
-    with open(file_path, 'r') as file:
+    with open(file_path, 'r', encoding='utf-8-sig') as file:
         return json.load(file)
-
+0
 def load_emails():
     app = create_app()
     with app.app_context():

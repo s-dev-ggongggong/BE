@@ -33,7 +33,7 @@ class Chart(db.Model):
 
 
 class Table(db.Model):
-    __tablename__= 'table'
+    __tablename__= 'tables'
     __table_args__={'extend_existing':True}
 
     id = db.Column(db.Integer, primary_key=True)

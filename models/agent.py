@@ -6,11 +6,13 @@ class Agent(db.Model):
     __table_args__={'extend_existing':True}
     
     id = db.Column(db.Integer, primary_key=True)
+    # ... other fields ...
+    trainings = db.relationship('Training', back_populates='agent', lazy=True)
+    
     name = db.Column(db.String(120), nullable=False) 
     value = db.Column(db.String(120), nullable=False)
     description = db.Column(db.String(250), nullable=True)
     
-    trainings = db.relationship('Training', back_populates='agent',lazy=True)
 
     def __init__(self,name,  value, description=None):
         self.name = name

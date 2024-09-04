@@ -20,16 +20,16 @@ class Training(db.Model):
     createdAt = db.Column(db.DateTime, default=datetime.utcnow)
     updatedAt = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
-    agentId = db.Column(db.Integer, db.ForeignKey('agents.id'), nullable=True)
-    userId = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True)
+    agent_id = db.Column(db.Integer, db.ForeignKey('agents.id'), nullable=True)
+    employee_id = db.Column(db.Integer, db.ForeignKey('employees.id'), nullable=True)
+   
     agent = db.relationship('Agent', back_populates='trainings', lazy=True)
-    user = db.relationship('User', back_populates='trainings', lazy='select')
+    employee = db.relationship('Employee', back_populates='trainings', lazy='select')
+    event_logs = db.relationship('EventLog', back_populates='training', lazy='dynamic')
 
-
-    
     def __init__(self, trainingName, trainingDesc, trainingStart, trainingEnd,
-                 resourceUser, maxPhishingMail, status, department, userId=None,
-                 agentStartDate=None, agentId=None):
+                 resourceUser, maxPhishingMail, status, department, employee_id=None,
+                 agentStartDate=None, agent_id=None):
                  
         self.trainingName = trainingName
         self.trainingDesc = trainingDesc
@@ -40,8 +40,9 @@ class Training(db.Model):
         self.set_status(status)
         self.department = department
         self.agentStartDate = self._parse_date(agentStartDate) if agentStartDate else None
-        self.agentId = agentId
-        self.userId = userId
+        self.agent_id = agent_id
+        self.employee_id = employee_id
+
     @staticmethod
     def _parse_date(date_value):
         if isinstance(date_value, date):
@@ -53,7 +54,7 @@ class Training(db.Model):
 
 
     def set_status(self, status):
-        valid_statuses = ['pending', 'in_progress', 'completed']
+        valid_statuses = ['PLAN', 'RUN', 'FIN']
         if status not in valid_statuses:
             raise ValueError(f"Invalid status. Must be one of: {', '.join(valid_statuses)}")
         self.status = status
@@ -72,6 +73,5 @@ class Training(db.Model):
             'agentStartDate': self.agentStartDate.isoformat() if self.agentStartDate else None,
             'createdAt': self.createdAt.isoformat(),
             'updatedAt': self.updatedAt.isoformat(),
-            'agentId': self.agentId,
-             'userId':self.userId
-        }
+            'agent_id': self.agent_id,
+            'employee_id': self.employee_id}

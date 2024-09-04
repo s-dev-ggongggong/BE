@@ -6,7 +6,7 @@
     "trainingEnd": "2023-08-31",
     "resourceUser": 1,
     "maxPhishingMail": 5,
-    "status": "completed",
+    "status": "FIN",
     "department": "IT Security",
     "agentStartDate": null,
     "agentId": null
@@ -18,7 +18,7 @@
     "trainingEnd": "2023-09-30",
     "resourceUser": 2,
     "maxPhishingMail": 10,
-    "status": "completed",
+    "status": "FIN",
     "department": "Cybersecurity",
     "agentStartDate": null,
     "agentId": null
@@ -30,7 +30,7 @@
     "trainingEnd": "2024-09-10",
     "resourceUser": 3,
     "maxPhishingMail": 5,
-    "status": "pending",
+    "status": "PLAN",
     "department": "General Staff",
     "agentStartDate": null,
     "agentId": null
@@ -42,7 +42,7 @@
     "trainingEnd": "2024-09-20",
     "resourceUser": 10,
     "maxPhishingMail": 3,
-    "status": "pending",
+    "status": "PLAN",
     "department": "All Departments",
     "agentStartDate": null,
     "agentId": null
