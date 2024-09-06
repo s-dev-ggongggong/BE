@@ -24,7 +24,7 @@ def home():
 def login():
     if request.method == 'GET':
         # 로그인 페이지 반환
-        return render_template('login.html')
+        #return render_template('login.html')
         return jsonify({"msg": "sucess create_login page"}), 200
 
     
