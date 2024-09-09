@@ -1,0 +1,50 @@
+[
+  {
+    "trainingName": "Phishing Awareness 101",
+    "trainingDesc": "Basic training on recognizing phishing attempts",
+    "trainingStart": "2023-08-01",
+    "trainingEnd": "2023-08-31",
+    "resourceUser": 1,
+    "maxPhishingMail": 5,
+    "status": "FIN",
+    "department": "IT Security",
+    "agentStartDate": null,
+    "agentId": null
+  },
+  {
+    "trainingName": "Advanced Phishing Techniques",
+    "trainingDesc": "In-depth analysis of sophisticated phishing methods",
+    "trainingStart": "2023-09-01",
+    "trainingEnd": "2023-09-30",
+    "resourceUser": 2,
+    "maxPhishingMail": 10,
+    "status": "FIN",
+    "department": "Cybersecurity",
+    "agentStartDate": null,
+    "agentId": null
+  },
+  {
+    "trainingName": "Phishing Awareness",
+    "trainingDesc": "Training on how to recognize phishing attempts",
+    "trainingStart": "2024-09-01",
+    "trainingEnd": "2024-09-10",
+    "resourceUser": 3,
+    "maxPhishingMail": 5,
+    "status": "PLAN",
+    "department": "General Staff",
+    "agentStartDate": null,
+    "agentId": null
+  },
+  {
+    "trainingName": "Password Security",
+    "trainingDesc": "Best practices for creating secure passwords",
+    "trainingStart": "2024-09-15",
+    "trainingEnd": "2024-09-20",
+    "resourceUser": 10,
+    "maxPhishingMail": 3,
+    "status": "PLAN",
+    "department": "All Departments",
+    "agentStartDate": null,
+    "agentId": null
+  }
+]

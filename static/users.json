@@ -1,0 +1,37 @@
+[
+  {
+    "username": "test1",
+    "email": "test1@example.com",
+    "password": "password1",
+    "department": "Engineering",
+    "role_name": "사원"
+  },
+  {
+    "username": "test2",
+    "email": "test2@example.com",
+    "password": "password2",
+    "department": "Marketing",
+    "role_name": "대리"
+  },
+  {
+    "username": "test3",
+    "email": "test3@example.com",
+    "password": "password3",
+    "department": "Sales",
+    "role_name": "과장"
+  },
+  {
+    "username": "test4",
+    "email": "test4@example.com",
+    "password": "password4",
+    "department": "Human Resources",
+    "role_name": "차장"
+  },
+  {
+    "username": "test5",
+    "email": "test5@example.com",
+    "password": "password5",
+    "department": "Research and Development",
+    "role_name": "연구원"
+  }
+]

@@ -1,0 +1,17 @@
+[
+  {
+    "name": "Agent A",
+    "value": "Value 1",
+    "description": "Description for Agent A"
+  },
+  {
+    "name": "Agent B",
+    "value": "Value 2",
+    "description": "Description for Agent B"
+  },
+  {
+    "name": "Agent C",
+    "value": "Value 3",
+    "description": "Description for Agent C"
+  }
+]

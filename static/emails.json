@@ -1,0 +1,37 @@
+[
+  {
+    "subject": "Welcome to our company",
+    "body": "Thank you for signing up!",
+    "sender": "support@example.com",
+    "recipient": "test1@example.com",
+    "sentDate": "2023-09-02T00:00:00Z"
+  },
+  {
+    "subject": "Your weekly report",
+    "body": "Here's your activity summary for the week.",
+    "sender": "reports@example.com",
+    "recipient": "test2@example.com",
+    "sentDate": "2023-09-02T00:00:00Z"
+  },
+  {
+    "subject": "[AD] Suggestion for developer Tools",
+    "body": "Tools for developer.",
+    "sender": "unknown@example.com",
+    "recipient": "test3@example.com",
+    "sentDate": "2023-09-02T00:00:00Z"
+  },
+  {
+    "subject": "Your HR Score reports",
+    "body": "Here's your Test Score.",
+    "sender": "HR@example.com",
+    "recipient": "test4@example.com",
+    "sentDate": "2023-09-02T00:00:00Z"
+  },
+  {
+    "subject": "IT-DEV team assignment",
+    "body": "This is daily mission for junior.",
+    "sender": "IT.dep@example.com",
+    "recipient": "test5@example.com",
+    "sentDate": "2023-09-02T00:00:00Z"
+  }
+]
