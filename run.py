@@ -1,37 +1,52 @@
-import os,sys
+import os, sys
 import click
 from flask.cli import FlaskGroup
-from flask_migrate import Migrate
-
-# Add the current directory to sys.path
-current_dir = os.path.abspath(os.path.dirname(__file__))
-sys.path.insert(0, current_dir)
-
-from __init__ import create_app, init_db
-from extensions import db
-
-def create_app_wrapper():
-    return create_app()
+from flask import Flask
+from extensions import init_extensions, db, jwt  # 필요한 확장 기능을 가져옴
+from api.routes import routes  # 블루프린트 가져오기
 
 
-@click.group(cls=FlaskGroup, create_app=create_app_wrapper)
+# 애플리케이션 생성 함수
+def create_app():
+    app = Flask(__name__)
+    app.config.from_object('config.Config')  # 환경설정 파일 로드
+
+    # 확장 기능 초기화
+    init_extensions(app)
+
+    # 블루프린트 등록
+    app.register_blueprint(routes)
+    
+    return app
+
+
+# CLI 명령어 그룹 설정
+@click.group(cls=FlaskGroup, create_app=create_app)
 def cli():
     pass
 
+
+# 데이터베이스 초기화 명령어 추가
 @cli.command('init_db')
 def init_db_command():
-    app= create_app()
-    init_db(app)
-    click.echo("Intialized the db")
+    app = create_app()
+    with app.app_context():
+        db.create_all()  # 데이터베이스 테이블 생성
+    click.echo("Database initialized")
 
+
+# 개발 서버 실행 명령어 추가
 @cli.command('dev')
 @click.option('--port', default=8000, help='Port to run the server on')
 def dev_cmd(port):
     click.echo(f"Running on port {port}")
     os.environ['FLASK_ENV'] = 'development'
     os.environ['FLASK_DEBUG'] = '1'
-    click.echo(f"To run the server, use: flask run --port {port}")
+    app = create_app()
+    app.run(port=port, debug=True)
 
-if __name__ == '__main__':
-    
+
+# 메인 실행 코드
+if __name__ == "__main__":
     cli()
+

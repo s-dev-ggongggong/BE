@@ -1,12 +1,13 @@
 import os
+import secrets
 from sqlalchemy import create_engine
 
 class Config:
     BASEDIR = os.path.abspath(os.path.dirname(__file__))
     
     # 데이터베이스 URI 설정
-    SQLALCHEMY_DATABASE_URI = 'sqlite:///' + os.path.join(BASEDIR, 'db', 'e_sol.db')
-    SQLALCHEMY_TRACK_MODIFICATIONS = os.getenv('SQLALCHEMY_TRACK_NOTIFICATIONS', False)
+    SQLALCHEMY_DATABASE_URI = os.getenv('DATABASE_URL', 'sqlite:///' + os.path.join(BASEDIR, 'db', 'e_sol.db'))
+    SQLALCHEMY_TRACK_MODIFICATIONS = os.getenv('SQLALCHEMY_TRACK_MODIFICATIONS', 'False').lower() in ['true', '1', 't']
     
     # Swagger 설정
     SWAGGER_URL = '/swagger'
@@ -15,12 +16,14 @@ class Config:
         'app_name': "Email Test Server"
     }
     
-    # JWT 설정 추가
-    JWT_SECRET_KEY = os.getenv('JWT_SECRET_KEY', secrets.token_urlsafe(32))  # JWT 토큰에 사용할 비밀키 설정
+    # JWT 설정
+    JWT_SECRET_KEY = os.getenv('JWT_SECRET_KEY', secrets.token_urlsafe(32))  # 환경 변수에서 가져오고 없으면 랜덤값
 
     # 기타 설정
-    DEBUG = True
+    DEBUG = os.getenv('FLASK_DEBUG', 'True').lower() in ['true', '1', 't']
     ENGINE = create_engine(SQLALCHEMY_DATABASE_URI)
-    IMAP_SERVER = '10.0.10.162'
-    USERNAME = 'test4'
-    PASSWORD = 'igloo1234'
+    
+    # 이메일 서버 설정
+    IMAP_SERVER = os.getenv('IMAP_SERVER', '10.0.10.162')
+    USERNAME = os.getenv('EMAIL_USERNAME', 'test4')  # 민감한 정보는 환경 변수에서 가져오는 것이 바람직
+    PASSWORD = os.getenv('EMAIL_PASSWORD', 'igloo1234')  # 민감한 정보는 환경 변수에서 관리하는 것이 좋음

@@ -3,7 +3,7 @@ from extensions import db, session_scope
 from marshmallow import ValidationError
 import csv
 from utils.utils import success_response, validate_training_data, create_training_record
-from models import Employee, Training, EventLog, Form, AgentLog, Email, DashboardItem
+from models import Employee, Training, EventLog, Form, AgentLog, Email, DashboardItem, Admin
 from flask_jwt_extended import jwt_required, get_jwt_identity, create_access_token
 
 # 블루프린트 설정
@@ -17,28 +17,35 @@ def home():
 # 로그인 라우트
 @routes.route('/login', methods=['POST'])
 def login():
-    username = request.json.get('username') if request.is_json else request.form.get('username')
-    password = request.json.get('password') if request.is_json else request.form.get('password')
+    # admin_id와 password를 JSON 형식으로 받아오기
+    try:
+        data = request.get_json()  # JSON 데이터 받아오기
+        admin_id = data.get('id')
+        password = data.get('password')
+    except:
+        return jsonify({"msg": "Invalid input format"}), 400
 
-    if not username or not password:
-        return jsonify({"msg": "Username and password required"}), 400
+    # 입력 값 확인
+    if not admin_id or not password:
+        return jsonify({"msg": "Admin ID and password required"}), 400
 
-    user = db.session.query(Employee).filter_by(username=username).first()
-    if not user or user.password != password:
-        return jsonify({"msg": "Invalid username or password"}), 401
-    if not user.is_admin:
-        return jsonify({"msg": "You are not authorized to access this resource"}), 403
+    # DB에서 admin_id로 관리자 찾기
+    admin = db.session.query(Admin).filter_by(id=admin_id).first()
+    if not admin or admin.password != password:
+        return jsonify({"msg": "Invalid admin ID or password"}), 401
 
-    access_token = create_access_token(identity=username)
+    # 토큰 생성
+    access_token = create_access_token(identity=admin_id)
     return jsonify(access_token=access_token), 200
 
-# 권한 확인 함수
+# 권한 확인 함수 (id로 관리자 조회)
 def get_admin_user():
-    current_user = get_jwt_identity()
-    user = db.session.query(Employee).filter_by(username=current_user).first()
-    if not user or not user.is_admin:
+    current_user_id = get_jwt_identity()  # 토큰에서 현재 관리자 ID를 가져옴
+    admin = db.session.query(Admin).filter_by(id=current_user_id).first()  # id로 관리자 조회
+    if not admin:
         return None
-    return user
+    return admin
+
 
 # 필수 필드 확인 함수
 def check_required_fields(data, required_fields):
@@ -237,3 +244,22 @@ def upload_csv():
             return jsonify({"error": "Failed to process CSV file", "details": str(e)}), 500
     else:
         return jsonify({"error": "Invalid file format"}), 400
+
+
+
+######## 테스트용 #######
+
+'''
+
+@routes.route('/test_db', methods=['GET'])
+def test_db():
+    try:
+        # 단순히 DB에서 Admin 테이블을 쿼리
+        admin = db.session.query(Admin).first()
+        if admin:
+            return jsonify({"msg": "DB 연결 성공", "admin_id": admin.id}), 200
+        return jsonify({"msg": "DB에 Admin 데이터가 없습니다."}), 200
+    except Exception as e:
+        return jsonify({"msg": "DB 연결 실패", "error": str(e)}), 500
+
+'''

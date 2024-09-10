@@ -2,6 +2,7 @@ from marshmallow import fields
 from extensions import db, ma
 from models.employee import Employee
 
+
 # class Form(db.Model):
 #     __tablename__ = 'forms'
 #     id = db.Column(db.Integer, primary_key=True)
