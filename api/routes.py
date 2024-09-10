@@ -4,7 +4,7 @@ from marshmallow import ValidationError
 import csv
 from utils.utils import success_response, validate_training_data, create_training_record
 from models import Employee, Training, EventLog, Form, AgentLog, Email, DashboardItem
-from flask_jwt_extended import jwt_required, get_jwt_identity
+from flask_jwt_extended import jwt_required, get_jwt_identity, create_access_token
 
 # 블루프린트 설정
 routes = Blueprint('training', __name__)
