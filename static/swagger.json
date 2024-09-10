@@ -308,51 +308,6 @@
         }
       }
     },
-    "/dashboard_item": {
-      "post": {
-        "summary": "Create a new dashboard item",
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/DashboardItem"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Dashboard item created successfully",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/DashboardItem"
-                }
-              }
-            }
-          }
-        }
-      },
-      "get": {
-        "summary": "Get all dashboard items",
-        "responses": {
-          "200": {
-            "description": "Successful response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/components/schemas/DashboardItem"
-                  }
-                }
-              }
-            }
-          }
-        }
-      }
-    },
     "/users": {
       "get": {
         "tags": ["User"],
@@ -381,7 +336,7 @@
         "type": "object",
         "properties": {
           "id": { "type": "integer" },
-          "username": { "type": "string" },
+          "name": { "type": "string" },
           "email": { "type": "string" }
         }
       },
@@ -444,15 +399,6 @@
             "type": "integer",
             "description": "Maximum number of phishing emails"
           }
-        }
-      },
-      "DashboardItem": {
-        "type": "object",
-        "properties": {
-          "id": { "type": "integer" },
-          "title": { "type": "string" },
-          "value": { "type": "string" },
-          "description": { "type": "string" }
         }
       },
       "Error": {

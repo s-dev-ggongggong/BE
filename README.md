@@ -1,17 +1,20 @@
 # run back server
 
-- flask run --port 8000
-- python run.py
+- flask run --port 8000 (only)
+
+# 서버 정상작동 확인용
+
+python app.py dev --port 8000
 
 ## 가끔 경로 못찾거나 할때
 
 ### GITBASH, LINUX /MAC
 
-- export FLASK_APP=run.py
+- export FLASK_APP=app.py
 
 ### WINDOWS
 
-- set FLASK_APP=run.py
+- set FLASK_APP=app.py
 
 # requirements
 
@@ -39,9 +42,9 @@ python -m scripts.load_emails
 
 # 서버 에러 터질때
 
-1. $ find . -name "**pycache**" -exec rm -rf {} +
-2. $ find . -name ".pyc" -delete
-3. export FLASK_APP =run.py || set FLASK_APP =run.py
+1. find . -name "**pycache**" -exec rm -rf {} +
+2. find . -name ".pyc" -delete
+3. export FLASK_APP=app.py|| set FLASK_APP =app.py
 
 # KEY
 

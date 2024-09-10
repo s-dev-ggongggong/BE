@@ -1,104 +1,101 @@
-import os,sys ,time, bcrypt ,json
+import os, sys, time, json
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
-from datetime import datetime
-from run import create_app,db
+from init import create_app
 from models.role import Role
+from utils.db_error_handlers import handle_db_errors
 from models.department import Department
 from models.employee import Employee
-from sqlalchemy.exc import OperationalError ,IntegrityError
-from extensions import session_scope
+from sqlalchemy.exc import OperationalError, IntegrityError
+from extensions import session_scope, db
 import chardet
 
+# Detect file encoding
 def detect_encoding(file_path):
     with open(file_path, 'rb') as f:
         result = chardet.detect(f.read())
         return result['encoding']
-    
+
+# Load JSON data with detected encoding
 def load_json(file_path):
     encoding = detect_encoding(file_path)
     print(f"Detected encoding: {encoding}")
     with open(file_path, 'r', encoding=encoding) as file:
         return json.load(file)
-    
 
-def load_roles(session):
-    roles = [
-        "인턴", "사원", "주임", "계장", "대리", "과장", "차장", "부장", "감사",
-        "이사", "상무", "전무", "부사장", "사장", "임원",
-        "연구원", "주임연구원", "선임연구원", "책임연구원", "수석연구원", "연구소장"
-    ]
-    for role_name in roles:
-        existing_role = session.query(Role).filter_by(name=role_name).first()
-        if not existing_role:
-            role = Role(name=role_name)
-            session.add(role)
-
-    session.commit()
-    print("Roles have been populated.")
-def load_departments(session):
-    departments = [
-        "Engineering", "Marketing", "Sales", "Human Resources", "Research and Development"
-    ]
-
-    for dept_name in departments:
-        existing_department = session.query(Department).filter_by(name=dept_name).first()
-        if not existing_department:
-            department = Department(name=dept_name)
-            session.add(department)
-
-    session.commit()
-    print("Departments have been populated.")
-
+@handle_db_errors
+# Load user data and map roles without hardcoded mappings
 def load_users():
-    app=create_app()
+    app = create_app()
     with app.app_context():
         with session_scope() as session:
-            load_roles(session)
-            load_departments(session)
-            users_data = load_json('static/users.json') 
-            #with db.session.no_autoflush:
-                        
+            users_data = load_json('static/users.json')
+            print(f"Loaded {len(users_data)} users from JSON.")  # 사용자 데이터 로드 확인
+            
             for user_data in users_data:
-       
-                retries=5
-                while retries>0:
+                retries = 5
+                while retries > 0:
                     try:
-                        if not Employee.query.filter_by(email=user_data['email']).first():
-                            role = session.query(Role).filter_by(name=user_data['role_name']).first()
-                            if not role:
-                                print(f"Role {user_data['role_name']} not found for user {user_data['email']}")
-                                break
-                            department =session.query(Department).filter_by(name=user_data['department']).first()
-                            if not department:
-                                print(f"Department {user_data['department']} not found for user {user_data['email']}")
-                                break
+                        print(f"Processing user: {user_data['email']}")
+                        
+                        # 이메일로 사용자 조회
+                        existing_user = Employee.query.filter_by(email=user_data['email']).first()
+                        if existing_user:
+                            print(f"User {user_data['email']} already exists!")
+                            break
 
-                            user = Employee(
-                                username=user_data['username'],
-                                email=user_data['email'],
-                                password=user_data['password'],  
-                                department_id=department.id,
-                                role_id=role.id 
-                            )
+                        role_name_key = user_data.get('roleName')
 
-                            session.add(user)
-                            session.commit()
+                        # 영어 이름으로 역할 조회
+                        role = session.query(Role).filter_by(name=role_name_key).first()
 
-                            print(f"Added user: {user_data['email']}")
-                        else:
-                            print(f"{user_data['email']} exists!")
+                        # 한글 이름으로 역할 조회
+                        if not role:
+                            print(f"Role {role_name_key} not found by English name, trying Korean name...")
+                            role = session.query(Role).filter_by(korean_name=role_name_key).first()
+
+                        if not role:
+                            print(f"Role {role_name_key} not found for user {user_data['email']}")
+                            break
+
+                        print(f"Found role: {role.name} ({role.korean_name}) for user {user_data['email']}")
+
+                        # 부서 조회
+                        department = session.query(Department).filter_by(name=user_data['department']).first()
+                        if not department:
+                            print(f"Department {user_data['department']} not found for user {user_data['email']}")
+                            break
+
+                        print(f"Found department: {department.name} for user {user_data['email']}")
+
+                        # 사용자 추가
+                        user = Employee(
+                            name=user_data['name'],
+                            email=user_data['email'],
+                            password="igloo1234",  # Fixed password
+                            department_id=department.id,
+                            role_id=role.id  # 매칭된 역할의 ID 사용
+                        )
+
+                        session.add(user)
+                        session.commit()
+                        print(f"Added user: {user_data['email']}")
                         break
-                    except IntegrityError :
-                        print(f"IntegrityError {user_data['email']} exist!")
+                        
+                    except IntegrityError as ie:
+                        print(f"IntegrityError for user {user_data['email']}: {str(ie)}")
                         session.rollback()
-                    
-                    except OperationalError as e :
-                        if "database is locked" in str(e):
-                            retries -=1
+                        break
+                        
+                    except OperationalError as oe:
+                        if "database is locked" in str(oe):
+                            retries -= 1
+                            print(f"Database is locked, retrying... ({retries} retries left)")
                             time.sleep(0.5)
                             session.rollback()
                         else:
+                            print(f"OperationalError: {str(oe)}")
                             raise
+
 if __name__ == "__main__":
     load_users()
     print("Database populated successfully!")

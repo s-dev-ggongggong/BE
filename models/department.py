@@ -1,13 +1,12 @@
-# models/department.py
-
 from extensions import db
 
 class Department(db.Model):
     __tablename__ = 'departments'
-    __table_args__ = {'extend_existing': True}
-
     id = db.Column(db.Integer, primary_key=True)
-    name = db.Column(db.String(80), unique=True, nullable=False)
+    name = db.Column(db.String(100), nullable=False, unique=True)
+    code1 = db.Column(db.String(10), nullable=False)
+    code2 = db.Column(db.String(50), nullable=False)
+    korean_name = db.Column(db.String(100), nullable=False)
 
     employees = db.relationship('Employee', back_populates='department')
 

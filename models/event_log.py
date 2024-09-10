@@ -1,28 +1,29 @@
 from extensions import db
 from datetime import datetime
+import json
 
 class EventLog(db.Model):
-    __tablename__ = 'event_logs'  # Updated to plural for consistency
+    __tablename__ = 'event_logs'
+    
     id = db.Column(db.Integer, primary_key=True)
-    training_id = db.Column(db.Integer, db.ForeignKey('trainings.id'), nullable=False)
-    employee_id = db.Column(db.Integer, db.ForeignKey('employees.id'), nullable=False)  # Link to Employee
-    department_id = db.Column(db.Integer, db.ForeignKey('departments.id'), nullable=False)  # Link to Department if needed
-    position = db.Column(db.String(100), nullable=False)
-    email = db.Column(db.String(120), nullable=False)
-    name = db.Column(db.String(100), nullable=False)
     action = db.Column(db.String(50), nullable=False)
     timestamp = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+    
+    # 관련 엔티티의 ID를 저장. 필요에 따라 Null 허용
+    training_id = db.Column(db.Integer)
+    department_id = db.Column(db.Integer)
+    employee_id = db.Column(db.Integer)
+    email_id = db.Column(db.Integer)
+    role_id = db.Column(db.Integer)
+    
+    # 추가 데이터를 JSON 형태로 저장
+    data = db.Column(db.Text)
 
-    # Relationships
-    training = db.relationship('Training', back_populates='event_logs')
-    employee = db.relationship('Employee', back_populates='event_logs')
-    department = db.relationship('Department')  # Assuming you have a Department model
+    def set_data(self, data_dict):
+        self.data = json.dumps(data_dict)
 
-    def __init__(self, training_id, employee_id, department_id, position, email, name, action):
-        self.training_id = training_id
-        self.employee_id = employee_id
-        self.department_id = department_id
-        self.position = position
-        self.email = email
-        self.name = name
-        self.action = action
+    def get_data(self):
+        return json.loads(self.data) if self.data else {}
+
+    def __repr__(self):
+        return f'<EventLog {self.action} - {self.timestamp}>'
