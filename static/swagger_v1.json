@@ -1,0 +1,320 @@
+{
+    "swagger": "2.0",
+    "info": {
+      "description": "API documentation for Email Test Server",
+      "version": "1.0.0",
+      "title": "Email Test Server"
+    },
+    "host": "localhost:5000",
+    "basePath": "/",
+    "schemes": [
+      "http"
+    ],
+    "paths": {
+      "/login": {
+        "post": {
+          "tags": [
+            "Auth"
+          ],
+          "summary": "Login",
+          "description": "Login to the system and obtain JWT token",
+          "consumes": [
+            "application/json"
+          ],
+          "produces": [
+            "application/json"
+          ],
+          "parameters": [
+            {
+              "in": "body",
+              "name": "body",
+              "description": "JSON object containing name and password",
+              "required": true,
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string",
+                    "example": "admin"
+                  },
+                  "password": {
+                    "type": "string",
+                    "example": "igloo1234"
+                  }
+                }
+              }
+            }
+          ],
+          "responses": {
+            "200": {
+              "description": "JWT token",
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "access_token": {
+                    "type": "string",
+                    "example": "eyJhbGciOiJIUzI1NiIsInR..."
+                  }
+                }
+              }
+            },
+            "400": {
+              "description": "Invalid input format"
+            },
+            "401": {
+              "description": "Invalid name or password"
+            }
+          }
+        }
+      },
+      "/training": {
+        "get": {
+          "tags": [
+            "Training"
+          ],
+          "summary": "Get all trainings",
+          "description": "Fetch all training sessions",
+          "produces": [
+            "application/json"
+          ],
+          "security": [
+            {
+              "Bearer": []
+            }
+          ],
+          "responses": {
+            "200": {
+              "description": "Successful fetch",
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "data": {
+                    "type": "array",
+                    "items": {
+                      "$ref": "#/definitions/Training"
+                    }
+                  },
+                  "message": {
+                    "type": "string",
+                    "example": "Trainings fetched successfully"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "post": {
+          "tags": [
+            "Training"
+          ],
+          "summary": "Create a new training",
+          "description": "Create a new training session",
+          "consumes": [
+            "application/json"
+          ],
+          "produces": [
+            "application/json"
+          ],
+          "security": [
+            {
+              "Bearer": []
+            }
+          ],
+          "parameters": [
+            {
+              "in": "body",
+              "name": "body",
+              "description": "JSON object containing training details",
+              "required": true,
+              "schema": {
+                "$ref": "#/definitions/Training"
+              }
+            }
+          ],
+          "responses": {
+            "201": {
+              "description": "Training created",
+              "schema": {
+                "$ref": "#/definitions/Training"
+              }
+            },
+            "400": {
+              "description": "No data provided"
+            }
+          }
+        }
+      },
+      "/training/{id}": {
+        "get": {
+          "tags": [
+            "Training"
+          ],
+          "summary": "Get training by ID",
+          "description": "Fetch a training session by ID",
+          "produces": [
+            "application/json"
+          ],
+          "security": [
+            {
+              "Bearer": []
+            }
+          ],
+          "parameters": [
+            {
+              "in": "path",
+              "name": "id",
+              "required": true,
+              "type": "integer",
+              "description": "Training ID"
+            }
+          ],
+          "responses": {
+            "200": {
+              "description": "Successful fetch",
+              "schema": {
+                "$ref": "#/definitions/Training"
+              }
+            },
+            "404": {
+              "description": "Training not found"
+            }
+          }
+        },
+        "put": {
+          "tags": [
+            "Training"
+          ],
+          "summary": "Update a training",
+          "description": "Update an existing training session",
+          "consumes": [
+            "application/json"
+          ],
+          "produces": [
+            "application/json"
+          ],
+          "security": [
+            {
+              "Bearer": []
+            }
+          ],
+          "parameters": [
+            {
+              "in": "path",
+              "name": "id",
+              "required": true,
+              "type": "integer",
+              "description": "Training ID"
+            },
+            {
+              "in": "body",
+              "name": "body",
+              "description": "JSON object containing updated training details",
+              "required": true,
+              "schema": {
+                "$ref": "#/definitions/Training"
+              }
+            }
+          ],
+          "responses": {
+            "200": {
+              "description": "Training updated successfully",
+              "schema": {
+                "$ref": "#/definitions/Training"
+              }
+            },
+            "404": {
+              "description": "Training not found"
+            }
+          }
+        },
+        "delete": {
+          "tags": [
+            "Training"
+          ],
+          "summary": "Delete a training",
+          "description": "Delete an existing training session",
+          "produces": [
+            "application/json"
+          ],
+          "security": [
+            {
+              "Bearer": []
+            }
+          ],
+          "parameters": [
+            {
+              "in": "path",
+              "name": "id",
+              "required": true,
+              "type": "integer",
+              "description": "Training ID"
+            }
+          ],
+          "responses": {
+            "200": {
+              "description": "Training deleted successfully"
+            },
+            "404": {
+              "description": "Training not found"
+            }
+          }
+        }
+      }
+    },
+    "definitions": {
+      "Training": {
+        "type": "object",
+        "properties": {
+          "trainingName": {
+            "type": "string",
+            "example": "Phishing Awareness"
+          },
+          "trainingDesc": {
+            "type": "string",
+            "example": "Training session on phishing awareness"
+          },
+          "trainingStart": {
+            "type": "string",
+            "format": "date",
+            "example": "2024-09-12"
+          },
+          "trainingEnd": {
+            "type": "string",
+            "format": "date",
+            "example": "2024-09-13"
+          },
+          "resourceUser": {
+            "type": "integer",
+            "example": 1
+          },
+          "maxPhishingMail": {
+            "type": "integer",
+            "example": 100
+          },
+          "deptTarget": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "example": "HR, FN"
+            }
+          },
+          "roleTarget": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "example": "HR_SPECIALIST,HR_MANAGER,ACCOUNTANT,FINANCE_MANAGER"
+            }
+          }
+        }
+      }
+    },
+    "securityDefinitions": {
+      "Bearer": {
+        "type": "apiKey",
+        "name": "Authorization",
+        "in": "header",
+        "description": "JWT authorization header using the Bearer scheme. Example: \"Authorization: Bearer {token}\""
+      }
+    }
+  }
+  

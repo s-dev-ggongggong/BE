@@ -7,3 +7,4 @@ from . import department
 from . import role
 from . import event_log
 from . import auth_token
+from . import login
