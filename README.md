@@ -18,7 +18,13 @@ python app.py dev --port 8000
 
 # requirements
 
-pypreqs '../BE'
+pip install pipreqs
+
+pipreqs . --ignore flask --force
+
+# requirements 버전 dependency 관리
+
+pip install -r requirements.txt
 
 # db migrate
 
