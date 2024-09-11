@@ -1,10 +1,11 @@
 from extensions import db
-from models.email import Email
+ 
 from models.schemas import email_schema, emails_schema
 from utils.http_status_handler import handle_response, bad_request, not_found, server_error
 from utils.logger import setup_logger
 from sqlalchemy.exc import SQLAlchemyError
 from datetime import datetime
+from models.init import Training ,Email
 # Set up logger
 logger = setup_logger(__name__)
 
@@ -12,6 +13,7 @@ def get_emails():
     try:
         emails = Email.query.all()
         logger.info("Successfully fetched emails")
+        
         return handle_response(200, data=emails_schema.dump(emails), message="Emails fetched successfully.")
     except SQLAlchemyError as e:
         logger.error(f"Database error fetching emails: {str(e)}", exc_info=True)
@@ -137,3 +139,33 @@ def track_email_response(data):
     except Exception as e:
         logger.error(f"Error tracking email response: {str(e)}", exc_info=True)
         return server_error(f"Error tracking email response: {str(e)}")
+
+def check_and_set_action_for_email(email):
+    """Check if the email is associated with a training and update the action if needed."""
+    training = Training.query.get(email.training_id)  # Assuming email has a training_id
+    if training and training.training_start <= datetime.utcnow():
+        return "targetSetting"
+    return None
+
+
+def handle_event_log(trainings,event_log):
+    if trainings.status == 'TargetSetting':
+        # 메일 발송 로직 처리
+        send_phishing_emails(trainings)
+    elif event_log.action == 'RUN':
+        # 이메일 로그 생성
+        pass
+def send_phishing_emails(training_id, employee_list):
+    # Assuming the training contains an email template or some other information
+    training = Training.query.get(training_id)
+    email_template = training.email_template if training else "Default Email Template"
+
+    sent_emails = []
+    for employee in employee_list:
+        sent_emails.append({
+            "employee_id": employee["id"],
+            "email": employee["email"],
+            "sent_at": datetime.utcnow().isoformat(),
+            "email_body": email_template  # Utilize training data here
+        })
+    return sent_emails

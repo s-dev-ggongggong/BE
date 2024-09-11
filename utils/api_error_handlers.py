@@ -2,6 +2,7 @@ from functools import wraps
 from flask import jsonify
 from marshmallow import ValidationError
 from utils.logger import setup_logger
+from models.schemas import TrainingSchema
 from models.schemas import training_schema, trainings_schema  # Make sure to import the schemas here
 
 logger = setup_logger(__name__)
@@ -25,16 +26,14 @@ def validate_agent_ip(ip_addr):
 
 def validate_training_data(data, many=False):
     """Validates training data using Marshmallow schemas."""
+    schema = TrainingSchema()
     try:
-        if many:
-            logger.info("Validating multiple training data records.")
-            return trainings_schema.load(data), None  # Ensure trainings_schema is properly imported
-        logger.info("Validating single training data record.")
-        return training_schema.load(data), None  # Ensure training_schema is properly imported
+        # 데이터 변환 및 유효성 검사
+        validated_data = schema.load(data)
+        return validated_data
     except ValidationError as err:
         logger.warning(f"Validation error: {err.messages}")
-        return None, {"message": "Validation error", "errors": err.messages}
-
+        raise err
 def success_response(data=None, message=None, status=200):
     """Generates a success response with optional data and message."""
     response = {"success": True}

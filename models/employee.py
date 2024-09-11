@@ -1,6 +1,6 @@
 from extensions import db
-
-class Employee(db.Model):
+from models.serializable_mixin import SerializableMixin
+class Employee(db.Model,SerializableMixin):
     __tablename__ = 'employees'
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(100), nullable=False)
@@ -17,3 +17,15 @@ class Employee(db.Model):
 
     def __repr__(self):
         return f'<Employee {self.name}>'
+    
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'name': self.name,
+            'email': self.email,
+            'password': self.password,
+            'role_name': self.role_name.isoformat() if self.role_name else None,
+            'department_name': self.department_name.isoformat() if self.department_name else None,
+            'role': self.role,
+            'department':self.department
+        }

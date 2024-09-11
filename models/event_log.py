@@ -1,8 +1,8 @@
 from extensions import db
 from datetime import datetime
 import json
-
-class EventLog(db.Model):
+from models.serializable_mixin import SerializableMixin
+class EventLog(db.Model, SerializableMixin):
     __tablename__ = 'event_logs'
     
     id = db.Column(db.Integer, primary_key=True)
@@ -27,3 +27,14 @@ class EventLog(db.Model):
 
     def __repr__(self):
         return f'<EventLog {self.action} - {self.timestamp}>'
+    
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'action': self.action,
+            'timestamp': self.timestamp,
+            'training_id': self.training_id,
+            'employee_id': self.employee_id.isoformat() if self.employee_id else None,
+            'email_id': self.email_id.isoformat() if self.email_id else None,
+            'role_id': self.role_id,
+        }

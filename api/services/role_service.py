@@ -1,7 +1,25 @@
 from models.role import Role
+from api.services.department_service import get_all_departments
 from extensions import db
 from sqlalchemy.exc import SQLAlchemyError
-
+def validate_training_data(data):
+    departments, _ = get_all_departments()
+    roles, _ = get_all_roles()
+    valid_depts = {dept['code1'] for dept in departments}
+    valid_roles = {role['name'] for role in roles}
+    
+    invalid_depts = set(data.get('deptTarget', [])) - valid_depts
+    invalid_roles = set(data.get('roleTarget', [])) - valid_roles
+    
+    errors = []
+    if invalid_depts:
+        errors.append(f"Invalid departments: {invalid_depts}")
+    if invalid_roles:
+        errors.append(f"Invalid roles: {invalid_roles}")
+    
+    if errors:
+        return False, ". ".join(errors)
+    return True, None
 def get_all_roles():
     try:
         roles = Role.query.all()

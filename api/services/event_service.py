@@ -2,7 +2,7 @@ from models.event_log import EventLog
 from extensions import db
 from sqlalchemy.exc import SQLAlchemyError
 from utils.http_status_handler import handle_response, server_error, not_found, bad_request
-from api.services.training_service import check_and_set_action_for_email
+ 
   # 수정 후
 
 
@@ -102,3 +102,5 @@ def delete_event_log(event_log_id):
     except SQLAlchemyError as e:
         db.session.rollback()
         return server_error(str(e))
+
+

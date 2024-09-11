@@ -1,8 +1,8 @@
 from extensions import db
  
 from extensions import db
-
-class AuthToken(db.Model):
+from models.serializable_mixin import SerializableMixin
+class AuthToken(db.Model,SerializableMixin):
     __tablename__ = 'auth_tokens'
     id = db.Column(db.Integer, primary_key=True)
     token = db.Column(db.String(255), nullable=False)
@@ -13,3 +13,12 @@ class AuthToken(db.Model):
     
     def __repr__(self):
         return f'<AuthToken {self.token}>'
+   
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'token': self.token,
+            'created_at': self.created_at,
+            'expires_at': self.expires_at,
+            'employee_id': self.employee_id.isoformat() if self.employee_id else None
+        }
