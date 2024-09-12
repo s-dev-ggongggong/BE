@@ -1,6 +1,7 @@
 from flask import Flask, send_from_directory
 from flask_swagger_ui import get_swaggerui_blueprint
 from flask_migrate import Migrate
+from flask_cors import CORS
 import os
 from api import init_routes ,api_bp
  
@@ -24,6 +25,7 @@ def setup_swagger(app, config):
 def create_app(config_class=Config):
     app = Flask(__name__)
     app.config.from_object(config_class)
+    CORS(app, resources={r"/*": {"origins": "*"}}) 
 
     # Initialize extensions
     db.init_app(app)
@@ -47,5 +49,4 @@ app = create_app()
 
 
 if __name__ == "__main__":
-    app = create_app()
-    app.run(debug=True)
+    app.run(debug=True,host="0.0.0.0",port=8000)
