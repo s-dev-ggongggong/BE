@@ -16,7 +16,7 @@ from app import app
 from extensions import db
 
 # Import models
-from models.init import Department, Role, Employee, Email, Training,AuthToken
+from models.init import Department, Role, Employee, Email, Training 
 
 def load_json(file_path):
     full_path = os.path.join(project_root, 'data', file_path)
@@ -29,7 +29,16 @@ def load_json(file_path):
 
 def insert_or_update(session, model, data, unique_field):
     added = updated = 0
+
+    # Get the required fields from the model
+    required_fields = model.required_fields()
+
     for item in data:
+        # Check if the required fields are present
+        missing_fields = [field for field in required_fields if not item.get(field)]
+        if missing_fields:
+            raise ValueError(f"Missing required fields: {', '.join(missing_fields)}")
+
         existing = session.query(model).filter_by(**{unique_field: item[unique_field]}).first()
         if existing:
             for key, value in item.items():
@@ -39,13 +48,14 @@ def insert_or_update(session, model, data, unique_field):
             new_item = model(**item)
             session.add(new_item)
             added += 1
-    
+
     try:
         session.commit()
         print(f"Successfully processed {model.__name__}: Added {added}, Updated {updated}")
     except SQLAlchemyError as e:
         session.rollback()
         print(f"Error processing {model.__name__} data: {str(e)}")
+
 
 def process_emails(emails_data):
     processed_emails = []
@@ -78,14 +88,18 @@ def process_emails(emails_data):
         processed_emails.append(processed_email)
     
     return processed_emails
+
+
 def process_trainings(trainings_data):
     for training in trainings_data:
         print(f"Raw training data: {training}")  # 디버깅을 위해 원본 데이터 출력
         
         training['training_name'] = training.pop('trainingName', training.get('training_name'))
         training['training_desc'] = training.pop('trainingDesc', training.get('training_desc'))
-        training['training_start'] = datetime.strptime(training.pop('trainingStart', training.get('training_start')), '%Y-%m-%d').date()
-        training['training_end'] = datetime.strptime(training.pop('trainingEnd', training.get('training_end')), '%Y-%m-%d').date()
+        
+        # 날짜 형식 변경
+        training['training_start'] = datetime.strptime(training.pop('trainingStart', training.get('training_start')), '%Y-%m-%d %H:%M:%S')
+        training['training_end'] = datetime.strptime(training.pop('trainingEnd', training.get('training_end')), '%Y-%m-%d %H:%M:%S')
         
         resource_user = training.pop('resourceUser', training.get('resource_user'))
         if resource_user is not None:
@@ -108,21 +122,15 @@ def process_trainings(trainings_data):
         training['dept_target'] = ','.join(training.pop('deptTarget', training.get('dept_target', [])))
         training['role_target'] = ','.join(training.pop('roleTarget', training.get('role_target', [])))
         
+        # created_at 필드 처리 (있다면)
+        if 'created_at' in training:
+            training['created_at'] = datetime.strptime(training['created_at'], '%Y-%m-%d %H:%M:%S')
+        
         print(f"Processed training data: {training}")  # 처리된 데이터 출력
     
     return trainings_data
 
-def process_auth_tokens(tokens_data):
-    processed_tokens = []
-    for token in tokens_data:
-        processed_token = {
-            'token': token['token'],
-            'employee_id': token['employee_id'],
-            'created_at': datetime.strptime(token['created_at'], '%Y-%m-%dT%H:%M:%SZ'),
-            'expires_at': datetime.strptime(token['expires_at'], '%Y-%m-%dT%H:%M:%SZ')
-        }
-        processed_tokens.append(processed_token)
-    return processed_tokens
+ 
 
 
 def init_db():
@@ -158,22 +166,7 @@ def init_db():
         
         insert_or_update(db.session, Training, process_trainings(load_json('trainings.json')), 'training_name')
 
-        # Load AuthToken data
-        try:
-            auth_tokens_data = process_auth_tokens(load_json('tokens.json'))
-            for token_data in auth_tokens_data:
-                existing_token = AuthToken.query.filter_by(token=token_data['token']).first()
-                if existing_token:
-                    for key, value in token_data.items():
-                        setattr(existing_token, key, value)
-                else:
-                    new_token = AuthToken(**token_data)
-                    db.session.add(new_token)
-            db.session.commit()
-            print(f"Successfully processed {len(auth_tokens_data)} auth tokens")
-        except Exception as e:
-            db.session.rollback()
-            print(f"Error processing auth tokens: {str(e)}")
+    
 
         print("All initial data loaded successfully")
      

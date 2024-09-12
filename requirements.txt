@@ -10,3 +10,4 @@ marshmallow-sqlalchemy==1.1.0
 PyJWT==2.9.0
 python-dotenv==1.0.1
 SQLAlchemy==2.0.32
+Flask-JWT-Extended== 4.6.0

@@ -2,8 +2,9 @@ from extensions import db
 from datetime import datetime
 import json
 from models.training import Training
+from models.base_model import BaseModel
 from models.serializable_mixin import SerializableMixin
-class DeletedTraining(db.Model, SerializableMixin):
+class DeletedTraining(BaseModel, SerializableMixin):
     __tablename__ = 'deleted_trainings'
     
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
