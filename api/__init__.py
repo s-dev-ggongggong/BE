@@ -13,8 +13,7 @@ from api.routes.role import  role_bp
 from api.routes.event_log import  event_log_bp
 from api.routes.login import login_bp  # 로그인 블루프린트 가져오기
  
-# def index():
-#     return redirect('/swagger')
+
 
 def init_routes():
     routes = [
@@ -26,6 +25,7 @@ def init_routes():
         (role_bp, '/role'),
         (event_log_bp, '/eventlog'),
         (login_bp, '/login')
+
     ]
 
     for route_blueprint, url_prefix in routes:

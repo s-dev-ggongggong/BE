@@ -5,7 +5,7 @@ from models.role import Role
 from models.employee import Employee
 from models.training import Training
 from models.email import Email
-from models.auth_token import AuthToken
+
 from models.event_log import EventLog
 from models.delete_train import DeletedTraining
 # Base Schema
@@ -54,7 +54,8 @@ class EmployeeSchema(Base):
     email = fields.Str(data_key="email")
     department_name = fields.Int(data_key="departmentName")
     role_name = fields.Int(data_key="roleName")
-   
+    admin_id = fields.Str(data_key="adminId")
+    admin_pw =  fields.Str(data_key="adminPw")
     class Meta(Base.Meta):
         model = Employee
         exclude = ('password',)
@@ -63,8 +64,8 @@ class TrainingSchema(Base):
     id = fields.Int(dump_only=True)
     training_name = fields.Str(data_key="trainingName")
     training_desc = fields.Str(data_key="trainingDesc")
-    training_start = fields.Date(data_key="trainingStart")
-    training_end = fields.Date(data_key="trainingEnd")
+    training_start = fields.DateTime(data_key="trainingStart",format='%Y-%m-%d %H:%M:%S')
+    training_end = fields.DateTime(data_key="trainingEnd",format='%Y-%m-%d %H:%M:%S')
     resource_user = fields.Int(data_key="resourceUser")
     max_phishing_mail = fields.Int(data_key="maxPhishingMail")
     
@@ -72,7 +73,7 @@ class TrainingSchema(Base):
     dept_target = fields.List(fields.Str(), data_key="deptTarget")
     role_target = fields.List(fields.Str(), data_key="roleTarget")
  
-    created_at = fields.DateTime(dump_only=True)
+    created_at = fields.DateTime(dump_only=True,format='%Y-%m-%d %H:%M:%S')
     is_finished = fields.Bool(dump_only=True)
     status = fields.Str(dump_only=True)
 
@@ -90,18 +91,18 @@ class DeletedTrainingSchema(Base):
     original_id = fields.Int(required=True)
     training_name = fields.Str(data_key="trainingName", required=True)
     training_desc = fields.Str(data_key="trainingDesc", required=True)
-    training_start = fields.Date(data_key="trainingStart", required=True)
-    training_end = fields.Date(data_key="trainingEnd", required=True)
+    training_start = fields.DateTime(data_key="trainingStart", required=True ,format='%Y-%m-%d %H:%M:%S')
+    training_end = fields.DateTime(data_key="trainingEnd", required=True,format='%Y-%m-%d %H:%M:%S')
     resource_user = fields.Int(data_key="resourceUser", required=True)
     max_phishing_mail = fields.Int(data_key="maxPhishingMail", required=True)
     dept_target = fields.List(fields.Str(), data_key="deptTarget")
     role_target = fields.List(fields.Str(), data_key="roleTarget")
 
 
-    created_at = fields.DateTime(dump_only=True)
+    created_at = fields.DateTime(dump_only=True,format='%Y-%m-%d %H:%M:%S')
     is_finished = fields.Boolean()
     status = fields.Str()
-    deleted_at = fields.DateTime(dump_only=True)
+    deleted_at = fields.DateTime(dump_only=True,format='%Y-%m-%d %H:%M:%S')
 
     class Meta(Base.Meta):
         model = DeletedTraining
@@ -112,28 +113,33 @@ class EmailSchema(Base):
     body = fields.Str(data_key="body")
     sender = fields.Str(data_key="sender")
     recipient = fields.Str(data_key="recipient")
-    sent_date = fields.DateTime(data_key="sentDate")
+    sent_date = fields.DateTime(data_key="sentDate",format='%Y-%m-%d %H:%M:%S')
     class Meta(Base.Meta):
         model = Email
 
-class AuthTokenSchema(Base):
-    id = fields.Int(data_key="id")
-    token = fields.Str(data_key="token")
-    employee_id = fields.Int(data_key="employeeId")
-    created_at = fields.DateTime(data_key="createdAt")
-    expires_at = fields.DateTime(data_key="expiresAt")  # 추가
-
-    class Meta(Base.Meta):
-        model = AuthToken
-
+ 
 class EventLogSchema(Base):
     id = fields.Int(data_key="id")
     action = fields.Str(data_key="action")
-    timestamp = fields.DateTime(data_key="timestamp")
+    timestamp = fields.DateTime(data_key="timestamp",format='%Y-%m-%d %H:%M:%S')
+    message = db.Column(db.String(255))  # 'message' 필드 추가
     
     training_id = fields.Int(data_key="trainingId")
     employee_id = fields.Int(data_key="employeeId")
     department_id = fields.Int(data_key="departmentId")
+    data = fields.Dict(data_key="data")
+
+    @validates_schema
+    def validate_role_department(self, data, **kwargs):
+        # Validate that the role exists
+        role = Role.query.filter_by(name=data.get('role_name')).first()
+        if not role:
+            raise ValidationError(f"Role {data.get('role_name')} does not exist.")
+        
+        # Validate that the department exists
+        department = Department.query.filter_by(name=data.get('department_name')).first()
+        if not department:
+            raise ValidationError(f"Department {data.get('department_name')} does not exist.")
 
     class Meta(Base.Meta):
         model = EventLog
@@ -149,8 +155,7 @@ training_schema = TrainingSchema()
 trainings_schema = TrainingSchema(many=True)
 email_schema = EmailSchema()
 emails_schema = EmailSchema(many=True)
-auth_token_schema = AuthTokenSchema()
-auth_tokens_schema = AuthTokenSchema(many=True)
+
 event_log_schema = EventLogSchema()
 event_logs_schema = EventLogSchema(many=True)
 deleted_training_schema = DeletedTrainingSchema()
@@ -162,6 +167,6 @@ __all__ = [
     'employee_schema', 'employees_schema',
     'training_schema', 'trainings_schema',
     'email_schema', 'emails_schema',
-    'auth_token_schema', 'auth_tokens_schema',
+ 
     'event_log_schema', 'event_logs_schema'
 ]

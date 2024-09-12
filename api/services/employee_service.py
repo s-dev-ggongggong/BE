@@ -9,7 +9,7 @@ def get_all_users():
     try:
         users = Employee.query.all()
         result = [
-            {"id": user.id, "name": user.name, "email": user.email, "department_id": user.department_id, "role_id": user.role_id}
+            {"id": user.id, "name": user.name, "email": user.email, "department_name": user.department_name, "role_name": user.role_name}
             for user in users
         ]
         return result, 200
@@ -20,7 +20,7 @@ def get_user_by_id(user_id):
     try:
         user = Employee.query.get_or_404(user_id)
         return {
-            "id": user.id, "name": user.name, "email": user.email, "department_id": user.department_id, "role_id": user.role_id
+            "id": user.id, "name": user.name, "email": user.email, "department_name": user.department_name, "role_name": user.role_name
         }, 200
     except SQLAlchemyError as e:
         return {"error": str(e)}, 500
@@ -31,8 +31,8 @@ def create_user(data):
             name=data['name'],
             email=data['email'],
             password=data['password'],  # Consider hashing this
-            department_id=data['department_id'],
-            role_id=data['role_id']
+            department_name=data['department_name'],
+            role_name=data['role_name']
         )
         db.session.add(new_user)
         db.session.commit()
@@ -63,8 +63,8 @@ def create_employee(data):
             name=data['name'],
             email=data['email'],
             password=data['password'],  # 비밀번호 삽입
-            department_id=data['department_id'],
-            role_id=data['role_id']
+            department_name=data['department_name'],
+            role_name=data['role_name']
         )
         db.session.add(employee)
         db.session.commit()

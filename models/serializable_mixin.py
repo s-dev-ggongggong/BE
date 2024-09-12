@@ -1,7 +1,5 @@
-# models/serializable_mixin.py
-from sqlalchemy.ext.declarative import DeclarativeMeta
-import json
 from datetime import date, datetime
+import json
 
 class SerializableMixin:
     def to_dict(self):
@@ -11,6 +9,6 @@ class SerializableMixin:
         def converter(o):
             if isinstance(o, (date, datetime)):
                 return o.isoformat()
-            if isinstance(o, DeclarativeMeta):
-                return o.to_dict()
         return json.dumps(self.to_dict(), default=converter)
+    
+    

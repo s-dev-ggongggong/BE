@@ -1,12 +1,12 @@
 from flask import Flask, send_from_directory
 from flask_swagger_ui import get_swaggerui_blueprint
 from flask_migrate import Migrate
-from extensions import db, ma, migrate, jwt  # jwt 추가
+from flask_cors import CORS
+from extensions import db, ma, migrate, jwt  # 중복 제거
 from config import Config
 from api import init_routes, api_bp
-from api.routes.login import login_bp  # login_bp를 가져오기
-import os
-
+from api.routes.login import login_bp
+import os  # 중복 제거
 
 def setup_swagger(app, config):
     swaggerui_blueprint = get_swaggerui_blueprint(
@@ -20,10 +20,10 @@ def setup_swagger(app, config):
     def send_swagger_json():
         return send_from_directory('static', 'swagger.json')
 
-
 def create_app(config_class=Config):
     app = Flask(__name__)
     app.config.from_object(config_class)
+    CORS(app, resources={r"/*": {"origins": "*"}})
 
     # Initialize extensions
     db.init_app(app)
@@ -43,7 +43,6 @@ def create_app(config_class=Config):
 
     return app
 
-
 if __name__ == "__main__":
     app = create_app()
-    app.run(debug=True)
+    app.run(debug=True, host="0.0.0.0", port=8000)  # 하나의 run()만 사용

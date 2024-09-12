@@ -1,8 +1,10 @@
 from extensions import db
 from datetime import datetime
 import json
+from models.base_model import BaseModel
 from models.serializable_mixin import SerializableMixin
-class Training(db.Model):
+
+class Training(BaseModel,SerializableMixin):
     __tablename__ = 'trainings'
     
     id = db.Column(db.Integer, primary_key=True,autoincrement=True)
@@ -35,20 +37,16 @@ class Training(db.Model):
         data = {c.name: getattr(self, c.name) for c in self.__table__.columns}
         data['deptTarget'] = self.dept_target.split(',') if self.dept_target else []
         data['roleTarget'] = self.role_target.split(',') if self.role_target else []
-        return {k: v for k, v in data.items() if v not in [None, '']}
-    #     return {
-    #         "id": self.id,
-    #         "trainingName": self.training_name,
-    #         "trainingDesc": self.training_desc,
-    #         "trainingStart": self.training_start,
-    #         "trainingEnd": self.training_end,
-    #         "resourceUser": self.resource_user,
-    #         "maxPhishingMail": self.max_phishing_mail,
-    #         "deptTarget": self.dept_target.split(',') if self.dept_target else [],
-    #         "roleTarget": self.role_target.split(',') if self.role_target else [],
-        
-    #     }
+        #return {k: v for k, v in data.items() if v not in [None, '']}
+        return data
 
   
     def __repr__(self):
         return f'<Training {self.training_name}>'
+    
+
+    @staticmethod
+    def required_fields():
+        return ['training_name', 'training_desc', 'training_start', 'training_end', 'resource_user'
+                ,'max_phishing_mail','dept_target','role_target']
+        

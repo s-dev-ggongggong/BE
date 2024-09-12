@@ -1,7 +1,9 @@
 from extensions import db
 from datetime import datetime
 from models.serializable_mixin import SerializableMixin
-class Email(db.Model, SerializableMixin):
+from models.base_model import BaseModel
+
+class Email(BaseModel, SerializableMixin):
     __tablename__ = 'emails'
     
     id = db.Column(db.Integer, primary_key=True)
@@ -29,3 +31,8 @@ class Email(db.Model, SerializableMixin):
     
     def __repr__(self):
         return f'<Email {self.subject}>'
+
+
+    @staticmethod
+    def required_fields():
+        return ['subject', 'body', 'sender', 'recipient', 'sent_date']

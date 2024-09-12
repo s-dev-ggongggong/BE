@@ -1,6 +1,7 @@
 from extensions import db
+from models.base_model import BaseModel
 from models.serializable_mixin import SerializableMixin
-class Department(db.Model,SerializableMixin):
+class Department(BaseModel,SerializableMixin):
     __tablename__ = 'departments'
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(100), nullable=False, unique=True)
@@ -25,3 +26,7 @@ class Department(db.Model,SerializableMixin):
             'dept_target': self.dept_target.split(',') if self.dept_target else []
         
         }
+    
+    @staticmethod
+    def required_fields():
+        return ['name', 'code1', 'code2', 'korean_name']

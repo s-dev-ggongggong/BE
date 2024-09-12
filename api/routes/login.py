@@ -9,32 +9,32 @@ login_bp = Blueprint('login_bp', __name__)
 @login_bp.route('/login', methods=['POST'])
 def login():
     try:
-        # name과 password를 JSON 형식으로 받아오기
+        # admin_id와 admin_pw를 JSON 형식으로 받아오기
         data = request.get_json()
-        name = data.get('name')
-        password = data.get('password')
+        admin_id = data.get('admin_id')
+        admin_pw = data.get('admin_pw')
     except:
         return jsonify({"msg": "Invalid input format"}), 400
 
     # 입력 값 확인
-    if not name or not password:
-        return jsonify({"msg": "Name and password required"}), 400
+    if not admin_id or not admin_pw:
+        return jsonify({"msg": "Admin ID and password required"}), 400
 
-    # DB에서 name으로 관리자 찾기
-    employee = db.session.query(Employee).filter_by(name=name).first()
-    if not employee or employee.password != password:
-        return jsonify({"msg": "Invalid name or password"}), 401
+    # DB에서 admin_id로 관리자 찾기
+    employee = db.session.query(Employee).filter_by(admin_id=admin_id).first()
+    if not employee or employee.admin_pw != admin_pw:
+        return jsonify({"msg": "Invalid admin ID or password"}), 401
 
     # jwt 토큰 생성
-    access_token = create_access_token(identity=name)
+    access_token = create_access_token(identity=admin_id)
     return jsonify(access_token=access_token), 200
 
 
-# 권한 확인 함수 (name으로 직원 조회)
+# 권한 확인 함수 (admin_id로 직원 조회)
 @jwt_required()
 def get_employee_user():
-    current_user_name = get_jwt_identity()  # 토큰에서 현재 사용자 이름을 가져옴
-    employee = db.session.query(Employee).filter_by(name=current_user_name).first()  # name으로 직원 조회
+    current_user_admin_id = get_jwt_identity()  # 토큰에서 현재 사용자 admin_id를 가져옴
+    employee = db.session.query(Employee).filter_by(admin_id=current_user_admin_id).first()  # admin_id로 직원 조회
     if not employee:
         return None
     return employee
