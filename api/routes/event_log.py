@@ -27,7 +27,7 @@ def get_event_log(id):
     except Exception as e:
         return server_error(f"Error fetching event log: {str(e)}")
 
-# Route: Create new event log
+# Route: Create new event logf
 @event_log_bp.route('/', methods=['POST'])
 def create_event_log():
     try:
