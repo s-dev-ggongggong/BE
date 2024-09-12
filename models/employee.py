@@ -12,8 +12,11 @@ class Employee(BaseModel,SerializableMixin):
      # Foreign keys for Role and Department
     role_name = db.Column(db.String(50), db.ForeignKey('roles.name'), nullable=False)
     department_name = db.Column(db.String(100), db.ForeignKey('departments.name'), nullable=False)
-    admin_id = db.Column(db.String(50), unique=True, nullable=True)
-    admin_pw = db.Column(db.String(50), unique=True, nullable=True)
+    admin_id = db.Column(db.String(50), nullable=True)
+    admin_pw = db.Column(db.String(50), nullable=True)
+
+    def check_admin_credentials(self, admin_id, admin_pw):
+        return self.admin_id == admin_id and self.admin_pw == admin_pw
 
     # Relationships to the Role and Department models
     role = db.relationship('Role', back_populates='employees')
@@ -23,17 +26,12 @@ class Employee(BaseModel,SerializableMixin):
         return f'<Employee {self.name}>'
     
     def to_dict(self):
-        return {
-            'id': self.id,
-            'name': self.name,
-            'email': self.email,
-            'password': self.password,
-            'role_name': self.role_name.isoformat() if self.role_name else None,
-            'department_name': self.department_name.isoformat() if self.department_name else None,
-            'role': self.role,
-            'department':self.department
-        }
-    
+        data=super().to_dict()
+        data.update({
+            'admin_id': self.admin_id,
+            'admin_pw': self.admin_pw
+        })
+        
     
     @staticmethod
     def required_fields():

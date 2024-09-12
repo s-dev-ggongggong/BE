@@ -71,3 +71,21 @@ def create_employee(data):
         return handle_response(201, data=employee_schema.dump(employee), message="Employee created successfully.")
     except Exception as e:
         return server_error(f"Error creating employee: {str(e)}")
+def get_admin_info():
+    try:
+        admin_user = Employee.query.filter_by(name="admin").first()
+        
+        if admin_user:
+            return {
+                "id": admin_user.id,
+                "name": admin_user.name,
+                "email": admin_user.email,
+                "department_name": admin_user.department_name,
+                "role_name": admin_user.role_name,
+                "admin_id": admin_user.admin_id,
+                "admin_pw": admin_user.admin_pw  # Be cautious about returning this
+            }, 200
+        else:
+            return {"error": "Admin user not found"}, 404
+    except SQLAlchemyError as e:
+        return {"error": str(e)}, 500

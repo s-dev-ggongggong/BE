@@ -35,3 +35,11 @@ def add_user():
 def get_users_with_trainings():
     users, status = employee_service.get_users_with_trainings()
     return handle_response(status, data=users, message="Employees with trainings retrieved successfully")
+# employee.py
+
+@employee_bp.route('/admin', methods=['GET'])
+def get_admin():
+    admin_info, status = employee_service.get_admin_info()
+    if status == 404:
+        return not_found("Admin not found")
+    return handle_response(status, data=admin_info, message="Admin info retrieved successfully")

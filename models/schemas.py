@@ -54,8 +54,8 @@ class EmployeeSchema(Base):
     email = fields.Str(data_key="email")
     department_name = fields.Int(data_key="departmentName")
     role_name = fields.Int(data_key="roleName")
-    admin_id = fields.Str(data_key="adminId")
-    admin_pw =  fields.Str(data_key="adminPw")
+    admin_id = fields.Str(data_key="adminId", dump_only=True)
+    admin_pw = fields.Str(data_key="adminPw", dump_only=True)
     class Meta(Base.Meta):
         model = Employee
         exclude = ('password',)
