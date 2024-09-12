@@ -26,7 +26,6 @@ def init_routes():
         (department_bp, '/department'),
         (role_bp, '/role'),
         (event_log_bp, '/eventlog'),
-        (auth_token_bp, '/authtoken'),
         (login_bp, '/login')
     ]
 
