@@ -367,7 +367,7 @@
         "scheme": "bearer",
         "bearerFormat": "JWT"
       }
-    },
+    }
   },
   "paths": {
     "/login": {
