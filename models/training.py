@@ -3,8 +3,13 @@ from datetime import datetime
 import json
 from models.base_model import BaseModel
 from models.serializable_mixin import SerializableMixin
+from enum import Enum
 
-class Training(BaseModel,SerializableMixin):
+class TrainingStatus(Enum):
+    PLAN = "PLAN"
+    RUN = "RUN"
+    FIN = "FIN"
+class Training(BaseModel):
     __tablename__ = 'trainings'
     
     id = db.Column(db.Integer, primary_key=True,autoincrement=True)
@@ -19,8 +24,15 @@ class Training(BaseModel,SerializableMixin):
 
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     is_finished = db.Column(db.Boolean, default=False)
-    status = db.Column(db.String(255),nullable=True)
+    status = db.Column(db.Enum(TrainingStatus), default=TrainingStatus.PLAN, nullable=False)
 
+
+    def update_status(self):
+        now = datetime.utcnow().date()
+        if self.training_start <= now <= self.training_end:
+            self.status = TrainingStatus.RUN
+        elif now > self.training_end:
+            self.status = TrainingStatus.FIN
 
 
 
@@ -34,11 +46,20 @@ class Training(BaseModel,SerializableMixin):
 
 
     def to_dict(self):
-        data = {c.name: getattr(self, c.name) for c in self.__table__.columns}
-        data['deptTarget'] = self.dept_target.split(',') if self.dept_target else []
-        data['roleTarget'] = self.role_target.split(',') if self.role_target else []
-        #return {k: v for k, v in data.items() if v not in [None, '']}
-        return data
+        return {
+            'id': self.id,
+            'training_name': self.training_name,
+            'training_desc': self.training_desc,
+            'status': self.status.name if hasattr(self.status, 'name') else self.status,  # Convert enum to string
+            'training_start': self.training_start.strftime('%Y-%m-%d %H:%M:%S') if self.training_start else None,
+            'training_end': self.training_end.strftime('%Y-%m-%d %H:%M:%S') if self.training_end else None,
+            'resource_user': self.resource_user,
+            'max_phishing_mail': self.max_phishing_mail,
+            'dept_target': self.dept_target if isinstance(self.dept_target, list) else [],  # Ensure list
+            'role_target': self.role_target if isinstance(self.role_target, list) else [],  # Ensure list
+            'created_at': self.created_at.strftime('%Y-%m-%d %H:%M:%S') if self.created_at else None,
+            'is_finished': self.is_finished
+         }
 
   
     def __repr__(self):

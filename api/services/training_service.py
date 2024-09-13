@@ -92,7 +92,7 @@ def get_all_trainings():
 def get_training(id):
     try:
         training = Training.query.get_or_404(id)
-        return training.to_dict(), 200
+        return [training.to_dict() for training in trainings]
     except Exception as e:
         return {"error":f"트레이닝 조회 중 오류 발생: {str(e)}"},404
 

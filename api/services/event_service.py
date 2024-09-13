@@ -13,7 +13,7 @@ def check_duplicate_event_log(data):
     return EventLog.query.filter_by(
         action=data.get('action'),
         training_id=data.get('trainingId'),
-        message=data.get('message')
+        data=data.get('data')
     ).first()
 
 # Get all event logs
@@ -32,7 +32,7 @@ def get_all_event_logs():
             }
             for event_log in event_logs
         ]
-        return handle_response(200, data=result, message="Event logs fetched successfully")
+        return handle_response(200, result=result, data="Event logs fetched successfully")
     except SQLAlchemyError as e:
         return server_error(str(e))
 
@@ -41,7 +41,7 @@ def create_new_event_log(data):
     try:
         duplicate_log = check_duplicate_event_log(data)
         if duplicate_log:
-            return {"message": "Duplicate event log already exists"}, 400
+            return {"data": "Duplicate event log already exists"}, 400
 
         # Parse timestamp with fallback if missing or incorrectly formatted
         timestamp = datetime.strptime(data.get('timestamp', datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S')), '%Y-%m-%d %H:%M:%S')
@@ -50,7 +50,7 @@ def create_new_event_log(data):
             action=data['action'],
             timestamp=timestamp,
             training_id=data.get('trainingId'),
-            message=data.get('message', '')
+            data=data.get('data', '')
         )
         db.session.add(new_event_log)
         db.session.commit()
@@ -93,7 +93,7 @@ def update_event_log(event_log_id, data):
             return not_found(f"Event log with ID {event_log_id} not found"), 404
         duplicate_log = EventLog.query.filter(
             EventLog.training_id == data.get('trainingId'),
-            EventLog.message == data.get('message'),
+            EventLog.data == data.get('data'),
             EventLog.id != event_log_id  # Exclude current record from duplicate check
         ).first()
 
@@ -103,7 +103,7 @@ def update_event_log(event_log_id, data):
             action=existing_log.action,
             timestamp=timestamp,
             training_id=data.get('trainingId', existing_log.training_id),
-            message=data.get('message', existing_log.message)
+            data=data.get('data', existing_log.data)
         )
         db.session.add(new_event_log)
         db.session.commit()
@@ -119,13 +119,13 @@ def delete_event_log(event_log_id):
         # Fetch the existing event log
         event_log = EventLog.query.get(event_log_id)
         if not event_log:
-            return {"message": f"Event log with ID {event_log_id} not found"}, 404
+            return {"data": f"Event log with ID {event_log_id} not found"}, 404
 
         # Delete the event log
         db.session.delete(event_log)
         db.session.commit()
 
-        return {"message": f"Event log with ID {event_log_id} deleted successfully"}, 200
+        return {"data": f"Event log with ID {event_log_id} deleted successfully"}, 200
     except Exception as e:
         db.session.rollback()
         return {"error": str(e)}, 500

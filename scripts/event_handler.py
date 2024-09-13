@@ -4,29 +4,17 @@ from models.employee import Employee
 from models.department import Department
 from models.email import Email
 from datetime import datetime
-from extensions import db 
 import json
-from app import create_app
-# Convert camelCase to snake_case (simple implementation)
-def camel_to_snake(name):
-    return ''.join(['_' + i.lower() if i.isupper() else i for i in name]).lstrip('_')
 
-# Load JSON file
-def load_json(file_path):
-    with open(file_path, 'r') as file:
-        return json.load(file)
-
-# Process individual event
 def process_event(event_data, session):
     processed = {}
     for key, value in event_data.items():
-        snake_key = camel_to_snake(key)
+        snake_key = key  # Use the original key as is
         if snake_key == 'id':
             continue
         processed[snake_key] = process_field(snake_key, value, session)
     return processed if validate_event(processed, session) else None
 
-# Process fields in event data
 def process_field(key, value, session):
     if key in ['employee_id', 'email_id']:
         return ','.join(map(str, value if isinstance(value, list) else [value]))
@@ -38,7 +26,6 @@ def process_field(key, value, session):
         return value if value in ["", "agent"] else json.dumps(value)
     return value
 
-# Validate event data
 def validate_event(event, session):
     department = session.get(Department, event['department_id'])
     if not department:
@@ -50,7 +37,6 @@ def validate_event(event, session):
     
     return True
 
-# Validate IDs in event data
 def validate_ids(model, ids, session):
     valid_ids = []
     for id in ids.split(','):
@@ -60,7 +46,12 @@ def validate_ids(model, ids, session):
             print(f"Warning: {model.__name__} ID {id} not found")
     return ','.join(valid_ids)
 
-# Update or create new event in the database
+def handle_events(events_data, session):
+    for event_data in events_data:
+        processed_event = process_event(event_data, session)
+        if processed_event:
+            update_or_create_event(processed_event, session)
+
 def update_or_create_event(event_data, session):
     existing_event = EventLog.query.filter_by(
         action=event_data['action'],
@@ -78,29 +69,3 @@ def update_or_create_event(event_data, session):
     else:
         new_event = EventLog(**event_data)
         session.add(new_event)
-from sqlalchemy.exc import SQLAlchemyError
-
-# Load and process event logs from a JSON file
-def load_event_logs(file_path):
-    app = create_app()
-    with app.app_context():
-        try:
-            db.session.query(EventLog).delete()  # Clear existing events
-            db.session.commit()
-            
-            events_data = load_json(file_path)
-            for event_data in events_data:
-                processed_event = process_event(event_data, db.session)
-                if processed_event:
-                    update_or_create_event(processed_event, db.session)
-            
-            db.session.commit()
-            print(f"Processed and loaded {len(events_data)} events")
-        except SQLAlchemyError as e:
-            db.session.rollback()
-            print(f"An error occurred: {str(e)}")
-        finally:
-            db.session.close()
-
-if __name__ == '__main__':
-    load_event_logs('data/event_logs.json')
