@@ -1,7 +1,10 @@
+import sys
+import os
+project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
+sys.path.insert(0, project_root)
 from extensions import db
  
 from models.schemas import email_schema, emails_schema
-from utils.http_status_handler import handle_response, bad_request, not_found, server_error
 from utils.logger import setup_logger
 from datetime import datetime
 from sqlalchemy import and_
@@ -131,7 +134,7 @@ def generate_phishing_logs(data):
                 "original_sender": original_sender,
                 "new_sender": email.sender,
                 "new_recipient": email.recipient,
-                "phishing_flag_set_at": datetime.utcnow().isoformat()
+                "phishing_flag_set_at": datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S')
             }
             logs.append(log)
         
@@ -157,7 +160,7 @@ def send_phishing_emails(training_id, employee_list):
             sent_emails.append({
                 "employee_id": employee["id"],
                 "email": employee["email"],
-                "sent_at": datetime.utcnow().isoformat(),
+                "sent_at": datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S'),
                 "email_body": email_template
             })
         return {"data": sent_emails, "message": "Phishing emails sent", "status_code": 200}
@@ -172,7 +175,7 @@ def check_and_set_action_for_email(email_id):
             return {"error": "Email not found", "status_code": 404}
         
         training = Training.query.get(email.training_id) if hasattr(email, 'training_id') else None
-        if training and training.training_start <= datetime.utcnow():
+        if training and training.training_start <= datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S'):
             action = "targetSetting"
             email.action = action
             db.session.commit()

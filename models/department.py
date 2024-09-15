@@ -21,10 +21,9 @@ class Department(BaseModel,SerializableMixin):
             'name': self.name,
             'code1': self.code1,
             'code2': self.code2,
-            'korean_name': self.korean_name.isoformat() if self.korean_name else None,
-            'employees': self.employees.isoformat() if self.employees else None,
-            'dept_target': self.dept_target.split(',') if self.dept_target else []
-        
+            'korean_name': self.korean_name,  # korean_name is a string, no isoformat() needed
+            'employees': [emp.id for emp in self.employees],  # Returning a list of employee IDs
+            'dept_target': self.dept_target.split(',') if self.dept_target else []  # Converting to list
         }
     
     @staticmethod

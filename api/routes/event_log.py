@@ -1,90 +1,51 @@
 from flask import Blueprint, request, jsonify
 from api.services import event_service
-from utils.api_error_handlers import api_errorhandler
-from utils.http_status_handler import handle_response, bad_request, not_found, server_error
-from models.event_log import EventLog
+from utils.api_error_handlers import api_errorhandler, success_response
+from marshmallow import ValidationError
+
 event_log_bp = Blueprint('event_log_bp', __name__)
 
 @api_errorhandler(event_log_bp)
 def handle_api_error(error):
     return jsonify({"error": str(error)}), 500
 
-# Route: Get all event logs
 @event_log_bp.route('/', methods=['GET'])
 def get_all_event_logs():
-    logs = EventLog.query.all()  # Fetch all event logs
-    logs_dict = [log.to_dict() for log in logs]  # Ensure serialization
-    return logs_dict, 200
+    logs, status = event_service.get_all_event_logs()
+    return success_response(data=logs, message="Event logs fetched 성공", status=status)
 
-# Route: Get event log by ID
 @event_log_bp.route('/<int:id>', methods=['GET'])
 def get_event_log(id):
-    try:
-        response, status = event_service.get_event_log_by_id(id)
-        if status == 404:
-            return not_found(f"Event log with ID {id} not found")
-        return handle_response(status, data=response, message=f"Event log ID {id} fetched successfully")
-    except Exception as e:
-        return server_error(f"Error fetching event log: {str(e)}")
+    log, status = event_service.get_event_log_by_id(id)
+    return success_response(data=log, message=f"Event log {id} fetched 성공", status=status)
 
-# Route: Create new event logf
-@event_log_bp.route('/', methods=['POST'])
-def create_event_log():
+@event_log_bp.route('/training/<int:training_id>', methods=['POST'])
+def create_or_update_event_log(training_id):
     try:
-        data = request.get_json()
-        if not data:
-            return bad_request("No data provided")
-        response, status = event_service.create_new_event_log(data)
-        return handle_response(status, data=response, message="Event log created successfully")
-    except ValueError as e:
-        return bad_request(str(e))
-    except Exception as e:
-        return server_error(f"Error creating event log: {str(e)}")
+        data = request.get_json().get('data')
+        result, status = event_service.handle_event_log(training_id, data)
+        return success_response(data=result, message="Event log created/updated 성공", status=status)
+    except ValidationError as err:
+        return jsonify({"error": err.messages}), 400
 
-# Route: Update an event log
-@event_log_bp.route('/<int:id>', methods=['PUT'])
-def update_event_log(id):
-    try:
-        data = request.get_json()
-        if not data:
-            return bad_request("No data provided")
-        
-        # Call the service to update the log
-        response, status = event_service.update_event_log(id, data)
-        return handle_response(status, data=response, message="Event log updated successfully")
-    except Exception as e:
-        return server_error(f"Error updating event log: {str(e)}")
-
-# Route: Delete an event log
 @event_log_bp.route('/<int:id>', methods=['DELETE'])
 def delete_event_log(id):
-    try:
-        # Call the service function to delete the event log
-        response, status = event_service.delete_event_log(id)
-        return jsonify(response), status  # Use jsonify to ensure the response is serialized
-    except Exception as e:
-        return server_error(f"Error deleting event log: {str(e)}")
+    result, status = event_service.delete_event_log(id)
+    return success_response(data=result, message="Event log deleted 성공", status=status)
 
-
-@event_log_bp.route('/agent_event/', methods=['POST'])
-def agent_create_event_log():
+@event_log_bp.route('/multiple', methods=['POST'])
+def handle_multiple_event_logs():
     try:
         data = request.get_json()
+        training_ids = data.get('training_ids', [])
+        event_data = data.get('data')
+        results = event_service.handle_multiple_events(training_ids, event_data)
+        return success_response(data=results, message="Multiple event logs processed 성공", status=200)
+    except ValidationError as err:
+        return jsonify({"error": err.messages}), 400
 
-        # Required fields, except 'action', since it will be set by the server
-        required_fields = ['timestamp', 'trainingId', 'message']
-        
-        # Check if all required fields are present and not empty
-        missing_fields = [field for field in required_fields if field not in data or not data[field]]
-        if missing_fields:
-            return bad_request(f"Missing or empty required fields: {', '.join(missing_fields)}")
-        
-        # Set 'action' to 'targetSetting' if not provided
-        if not data.get('action'):
-            data['action'] = 'targetSetting'
-        
-        # Call the service function to create the new log
-        response, status = event_service.create_new_event_log(data)
-        return handle_response(status, data=response, message="Event log created by agent successfully")
-    except Exception as e:
-        return server_error(f"Error creating event log from agent: {str(e)}")
+@event_log_bp.route('/multiple', methods=['DELETE'])
+def delete_multiple_event_logs():
+    event_ids = request.get_json().get('event_ids', [])
+    results = event_service.delete_multiple_events(event_ids)
+    return success_response(data=results, message="Multiple event logs 삭제 성공", status=200)

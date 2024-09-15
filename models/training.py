@@ -2,8 +2,8 @@ from extensions import db
 from datetime import datetime
 import json
 from models.base_model import BaseModel
-from models.serializable_mixin import SerializableMixin
 from enum import Enum
+from sqlalchemy.orm import validates
 
 class TrainingStatus(Enum):
     PLAN = "PLAN"
@@ -15,8 +15,8 @@ class Training(BaseModel):
     id = db.Column(db.Integer, primary_key=True,autoincrement=True)
     training_name = db.Column(db.String(255), nullable=False)
     training_desc = db.Column(db.Text, nullable=False)
-    training_start = db.Column(db.Date, nullable=False)
-    training_end = db.Column(db.Date, nullable=False)
+    training_start = db.Column(db.DateTime, nullable=False)
+    training_end = db.Column(db.DateTime, nullable=False)
     resource_user = db.Column(db.Integer, nullable=False)
     max_phishing_mail = db.Column(db.Integer, nullable=False)
     dept_target = db.Column(db.String, nullable=False)  # String으로 정의
@@ -26,48 +26,51 @@ class Training(BaseModel):
     is_finished = db.Column(db.Boolean, default=False)
     status = db.Column(db.Enum(TrainingStatus), default=TrainingStatus.PLAN, nullable=False)
 
+    is_deleted = db.Column(db.Boolean, default=False)
+    deleted_at = db.Column(db.DateTime, nullable=True)
+
+
+
+    @validates('dept_target', 'role_target')
+    def validate_targets(self, key, value):
+        if isinstance(value, list):
+            return ','.join(value)
+        return value
+
 
     def update_status(self):
-        now = datetime.utcnow().date()
+        now = datetime.utcnow()
         if self.training_start <= now <= self.training_end:
             self.status = TrainingStatus.RUN
         elif now > self.training_end:
             self.status = TrainingStatus.FIN
 
 
-
-
-    def __init__(self, **kwargs):
-        if 'dept_target' in kwargs and isinstance(kwargs['dept_target'], list):
-            kwargs['dept_target'] = ','.join(kwargs['dept_target'])
-        if 'role_target' in kwargs and isinstance(kwargs['role_target'], list):
-            kwargs['role_target'] = ','.join(kwargs['role_target'])
-        super(Training, self).__init__(**kwargs)
-
-
     def to_dict(self):
-        return {
-            'id': self.id,
-            'training_name': self.training_name,
-            'training_desc': self.training_desc,
-            'status': self.status.name if hasattr(self.status, 'name') else self.status,  # Convert enum to string
-            'training_start': self.training_start.strftime('%Y-%m-%d %H:%M:%S') if self.training_start else None,
-            'training_end': self.training_end.strftime('%Y-%m-%d %H:%M:%S') if self.training_end else None,
-            'resource_user': self.resource_user,
-            'max_phishing_mail': self.max_phishing_mail,
-            'dept_target': self.dept_target if isinstance(self.dept_target, list) else [],  # Ensure list
-            'role_target': self.role_target if isinstance(self.role_target, list) else [],  # Ensure list
-            'created_at': self.created_at.strftime('%Y-%m-%d %H:%M:%S') if self.created_at else None,
-            'is_finished': self.is_finished
-         }
+        # Get base fields
+        data = self.base_to_dict()
+        
+        data['dept_target'] = self.dept_target.split(',') if self.dept_target else []
+        data['role_target'] = self.role_target.split(',') if self.role_target else []
 
-  
-    def __repr__(self):
-        return f'<Training {self.training_name}>'
-    
+        return data
+
 
     @staticmethod
     def required_fields():
         return ['training_name', 'training_desc', 'training_start', 'training_end', 'resource_user'
                 ,'max_phishing_mail','dept_target','role_target']
         
+    @staticmethod
+    def parse_datetime(value):
+        if isinstance(value, str):
+            return datetime.fromisoformat(value.replace('Z', '+00:00')).strftime('%Y-%m-%d %H:%M:%S')
+        return value
+            
+    def __init__(self, **kwargs):
+        # Ensure lists are stored as comma-separated strings
+        if 'dept_target' in kwargs and isinstance(kwargs['dept_target'], list):
+            kwargs['dept_target'] = ','.join(kwargs['dept_target'])
+        if 'role_target' in kwargs and isinstance(kwargs['role_target'], list):
+            kwargs['role_target'] = ','.join(kwargs['role_target'])
+        super(Training, self).__init__(**kwargs)

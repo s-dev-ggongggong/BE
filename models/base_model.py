@@ -1,6 +1,6 @@
 from extensions import db
 from sqlalchemy.exc import IntegrityError
-
+from datetime import datetime
 class BaseModel(db.Model):
     __abstract__ = True
 
@@ -14,4 +14,12 @@ class BaseModel(db.Model):
         except IntegrityError:
             db.session.rollback()
             return None
-
+    def base_to_dict(self):
+        result = {}
+        for column in self.__table__.columns:
+            value = getattr(self, column.name)
+            if isinstance(value, datetime):
+                result[column.name] = value.strftime('%Y-%m-%d %H:%M:%S')
+            else:
+                result[column.name] = value
+        return result

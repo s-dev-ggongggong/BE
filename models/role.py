@@ -12,14 +12,10 @@ class Role(BaseModel,SerializableMixin):
 
     
     def to_dict(self):
-        return {
-            'id': self.id,
-            'name': self.name,
-            'korean_name': self.korean_name,
-            'employees': self.employees
-
-        }
-
+        data = self.base_to_dict()  # Get base fields
+        # Add or modify specific fields
+        data['custom_field'] = 'custom_value'
+        return data
     def __repr__(self):
         return f'<Role {self.name}>'
     

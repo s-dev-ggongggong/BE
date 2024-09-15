@@ -14,8 +14,10 @@ class Email(BaseModel, SerializableMixin):
     sent_date = db.Column(db.DateTime, default=datetime.utcnow)
     is_phishing = db.Column(db.Boolean, default=False)
     employee_id = db.Column(db.Integer, db.ForeignKey('employees.id'), nullable=True)
-
+    
     training_id = db.Column(db.Integer,db.ForeignKey('trainings.id'),nullable=True)
+    completed_training_id = db.Column(db.Integer, db.ForeignKey('complete_trainings.id'), nullable=True)
+
     def to_dict(self):
         return {
             'id': self.id,
@@ -23,16 +25,23 @@ class Email(BaseModel, SerializableMixin):
             'body': self.body,
             'sender': self.sender,
             'recipient': self.recipient,
-            'sent_date': self.sent_date.isoformat() if self.sent_date else None,
+            'sent_date': self.sent_date.strftime('%Y-%m-%d %H:%M:%S') if self.sent_date else None,
             'is_phishing': self.is_phishing,
             'employee_id': self.employee_id,
-            'training_id' :self.training_id
+            'training_id' :self.training_id,
+            'complete_training' : self.completed_training_id
         }
     
     def __repr__(self):
         return f'<Email {self.subject}>'
-
+    
 
     @staticmethod
     def required_fields():
         return ['subject', 'body', 'sender', 'recipient', 'sent_date']
+
+    @staticmethod
+    def parse_datetime(value):
+        if isinstance(value, str):
+            return datetime.fromisoformat(value.replace('Z', '+00:00')).strftime('%Y-%m-%d %H:%M:%S')
+        return value

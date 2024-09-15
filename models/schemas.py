@@ -6,9 +6,9 @@ from models.role import Role
 from models.employee import Employee
 from models.training import Training
 from models.email import Email
-
+from models.complete_train import CompleteTraining
 from models.event_log import EventLog
-from models.delete_train import DeletedTraining
+ 
 # Base Schema
 class Base(ma.SQLAlchemyAutoSchema):
     class Meta:
@@ -61,27 +61,31 @@ class EmployeeSchema(Base):
     class Meta(Base.Meta):
         model = Employee
         exclude = ('password',)
+
 class TrainingSchema(Base):
     id = fields.Int(dump_only=True)
     training_name = fields.Str(data_key="trainingName")
     training_desc = fields.Str(data_key="trainingDesc")
-    training_start = fields.DateTime(data_key="trainingStart",format='%Y-%m-%d %H:%M:%S')
-    training_end = fields.DateTime(data_key="trainingEnd",format='%Y-%m-%d %H:%M:%S')
+    training_start = fields.DateTime(data_key="trainingStart", format='iso', load_format='iso', dump_format='%Y-%m-%d %H:%M:%S')
+    training_end = fields.DateTime(data_key="trainingEnd", format='iso', load_format='iso', dump_format='%Y-%m-%d %H:%M:%S')
+    created_at = fields.DateTime(dump_only=True, format='iso', load_format='iso', dump_format='%Y-%m-%d %H:%M:%S')
+    deleted_at = fields.DateTime(dump_only=True,format='iso', load_format='iso', dump_format='%Y-%m-%d %H:%M:%S')
     resource_user = fields.Int(data_key="resourceUser")
     max_phishing_mail = fields.Int(data_key="maxPhishingMail")
-    
-    # Use lists here since you're receiving arrays in the JSON
-    dept_target = fields.List(fields.Str(), data_key="deptTarget")
-    role_target = fields.List(fields.Str(), data_key="roleTarget")
- 
-    created_at = fields.DateTime(dump_only=True,format='%Y-%m-%d %H:%M:%S')
+    dept_target = fields.List(fields.Str(), data_key="deptTarget", allow_none=True)
+    role_target = fields.List(fields.Str(), data_key="roleTarget", allow_none=True)
     is_finished = fields.Bool(dump_only=True)
+    is_deleted = fields.Boolean(dump_only=True)
     status = fields.Str(dump_only=True)
+
+    class Meta(Base.Meta):
+        model = Training
+        
 
 class EventLogSchema(Base):
     id = fields.Int(data_key="id")
     action = fields.Str(data_key="action")
-    timestamp = fields.DateTime(data_key="timestamp", format='%Y-%m-%d %H:%M:%S')
+    timestamp = fields.DateTime(data_key="timestamp", format='iso', load_format='iso', dump_format='%Y-%m-%d %H:%M:%S')
     training_id = fields.Int(data_key="trainingId")
     department_id = fields.Int(data_key="departmentId")
     employee_id = fields.Str(data_key="employeeId")
@@ -91,32 +95,21 @@ class EventLogSchema(Base):
 
     @pre_load
     def process_ids(self, data, **kwargs):
-        if 'employeeId' in data:
-            if isinstance(data['employeeId'], list):
-                data['employee_id'] = json.dumps(data['employeeId'])
-            else:
-                data['employee_id'] = data['employeeId']
-        if 'emailId' in data:
-            if isinstance(data['emailId'], list):
-                data['email_id'] = json.dumps(data['emailId'])
-            else:
-                data['email_id'] = data['emailId']
+        for field in ['employeeId', 'emailId', 'roleId']:
+            if field in data and isinstance(data[field], list):
+                data[field.lower()] = json.dumps(data[field])
         return data
 
     @post_dump
     def process_ids_dump(self, data, **kwargs):
-        if 'employee_id' in data:
-            try:
-                data['employeeId'] = json.loads(data['employee_id'])
-            except json.JSONDecodeError:
-                data['employeeId'] = data['employee_id']
-        if 'email_id' in data:
-            try:
-                data['emailId'] = json.loads(data['email_id'])
-            except json.JSONDecodeError:
-                data['emailId'] = data['email_id']
+        for field in ['employee_id', 'email_id', 'role_id']:
+            if field in data and isinstance(data[field], str):
+                try:
+                    data[field] = json.loads(data[field])
+                except json.JSONDecodeError:
+                    data[field] = []
         return data
-
+    
     @validates_schema
     def validate_ids(self, data, **kwargs):
         from models.department import Department
@@ -152,33 +145,24 @@ class EventLogSchema(Base):
         model = EventLog
     
  
-    class Meta(Base.Meta):
-        model = Training
-        load_instance=True
-        include_fk=True
+ 
 
-
-from marshmallow import Schema, fields
-
-class DeletedTrainingSchema(Schema):
+class CompleteTrainingSchema(Base):
     id = fields.Int(dump_only=True)
     original_id = fields.Int(required=True)
     training_name = fields.Str(data_key="trainingName", required=True)
     training_desc = fields.Str(data_key="trainingDesc", required=True)
-    training_start = fields.DateTime(data_key="trainingStart", required=True, format='%Y-%m-%d %H:%M:%S')
-    training_end = fields.DateTime(data_key="trainingEnd", required=True, format='%Y-%m-%d %H:%M:%S')
+    training_start = fields.DateTime(data_key="trainingStart", required=True, format='iso', load_format='iso', dump_format='%Y-%m-%d %H:%M:%S')
+    training_end = fields.DateTime(data_key="trainingEnd", required=True, format='iso', load_format='iso', dump_format='%Y-%m-%d %H:%M:%S')
+    completed_at = fields.DateTime(dump_only=True, format='iso', load_format='iso', dump_format='%Y-%m-%d %H:%M:%S')
     resource_user = fields.Int(data_key="resourceUser", required=True)
     max_phishing_mail = fields.Int(data_key="maxPhishingMail", required=True)
     dept_target = fields.List(fields.Str(), data_key="deptTarget", required=True)
     role_target = fields.List(fields.Str(), data_key="roleTarget", required=True)
 
-    created_at = fields.DateTime(dump_only=True, format='%Y-%m-%d %H:%M:%S')
-    is_finished = fields.Boolean(dump_only=True)
-    status = fields.Str()
-    deleted_at = fields.DateTime(dump_only=True, format='%Y-%m-%d %H:%M:%S')
-
-    class Meta:
-        model = DeletedTraining
+   
+    class Meta(Base.Meta):
+        model = CompleteTraining
  
 class EmailSchema(Base):
     id = fields.Int(data_key="id")
@@ -186,7 +170,7 @@ class EmailSchema(Base):
     body = fields.Str(data_key="body")
     sender = fields.Str(data_key="sender")
     recipient = fields.Str(data_key="recipient")
-    sent_date = fields.DateTime(data_key="sentDate",format='%Y-%m-%d %H:%M:%S')
+    sent_date = fields.DateTime(data_key="sentDate",format='iso', load_format='iso', dump_format='%Y-%m-%d %H:%M:%S')
     class Meta(Base.Meta):
         model = Email
 
@@ -194,7 +178,7 @@ class EmailSchema(Base):
 class EventLogSchema(Base):
     id = fields.Int(data_key="id")
     action = fields.Str(data_key="action")
-    timestamp = fields.DateTime(data_key="timestamp",format='%Y-%m-%d %H:%M:%S')
+    timestamp = fields.DateTime(data_key="timestamp",format='iso', load_format='iso', dump_format='%Y-%m-%d %H:%M:%S')
     message = db.Column(db.String(255))  # 'message' 필드 추가
     
     training_id = fields.Int(data_key="trainingId")
@@ -231,8 +215,8 @@ emails_schema = EmailSchema(many=True)
 
 event_log_schema = EventLogSchema()
 event_logs_schema = EventLogSchema(many=True)
-deleted_training_schema = DeletedTrainingSchema()
-deleted_trainings_schema = DeletedTrainingSchema(many=True)
+complete_training_schema = CompleteTrainingSchema()
+complete_trainings_schema = CompleteTrainingSchema(many=True)
 # Export all schemas
 __all__ = [
     'department_schema', 'departments_schema',
@@ -240,6 +224,6 @@ __all__ = [
     'employee_schema', 'employees_schema',
     'training_schema', 'trainings_schema',
     'email_schema', 'emails_schema',
- 
+    'complete_training_schema','complete_trainings_schema'
     'event_log_schema', 'event_logs_schema'
 ]

@@ -1,3 +1,6 @@
+import sys
+import os
+project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
 from models.event_log import EventLog
 from models.training import Training
 from models.employee import Employee
