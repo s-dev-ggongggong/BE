@@ -4,6 +4,8 @@ from flask import Blueprint, request, jsonify
 from api.services import employee_service
 from utils.api_error_handlers import api_errorhandler
 from utils.http_status_handler import handle_response, not_found, bad_request, server_error
+from flask_jwt_extended import  get_jwt_identity, jwt_required
+from utils.string_utils import convert_dict_keys_to_snake_case
 
 employee_bp = Blueprint('employee_bp', __name__)
 
@@ -37,9 +39,10 @@ def get_users_with_trainings():
     return handle_response(status, data=users, message="Employees with trainings retrieved successfully")
 # employee.py
 
-@employee_bp.route('/admin', methods=['GET'])
-def get_admin():
-    admin_info, status = employee_service.get_admin_info()
-    if status == 404:
-        return not_found("Admin not found")
-    return handle_response(status, data=admin_info, message="Admin info retrieved successfully")
+
+
+@employee_bp.route('/admin', methods=['POST'])
+def admin_login_route():
+    data = convert_dict_keys_to_snake_case(request.json)
+    login_result, status_code = employee_service.admin_login(data.get('admin_id'), data.get('admin_pw'))
+    return jsonify(login_result), status_code

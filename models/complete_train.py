@@ -1,7 +1,30 @@
+from sqlalchemy.types import TypeDecorator, TEXT
+import json
 from extensions import db
 from datetime import datetime
-from models.serializable_mixin import SerializableMixin
 from models.base_model import BaseModel
+from enum import Enum
+from sqlalchemy.orm import validates
+class TrainingStatus(Enum):
+    PLAN = "PLAN"
+    RUN = "RUN"
+    FIN = "FIN"
+    
+from sqlalchemy.types import TypeDecorator, VARCHAR
+import json
+
+class JSONEncodedDict(TypeDecorator):
+    impl = VARCHAR
+
+    def process_bind_param(self, value, dialect):
+        if value is not None:
+            return json.dumps(value, ensure_ascii=False)
+        return value
+
+    def process_result_value(self, value, dialect):
+        if value is not None:
+            return json.loads(value)
+        return value
 
 class CompleteTraining(BaseModel):
     __tablename__ = 'complete_trainings'
@@ -14,8 +37,10 @@ class CompleteTraining(BaseModel):
     training_end = db.Column(db.DateTime, nullable=False)
     resource_user = db.Column(db.Integer, nullable=False)
     max_phishing_mail = db.Column(db.Integer, nullable=False)
-    dept_target = db.Column(db.String(255), nullable=False)
-    role_target = db.Column(db.String(255), nullable=False)
+    dept_target = db.Column(JSONEncodedDict, nullable=False)
+    role_target = db.Column(JSONEncodedDict, nullable=False)
+    status = db.Column(db.Enum(TrainingStatus), default=TrainingStatus.FIN, nullable=False)
+
     completed_at = db.Column(db.DateTime, default=datetime.utcnow)
     
     # 관련 이메일 관리

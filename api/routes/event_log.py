@@ -18,34 +18,21 @@ def get_all_event_logs():
 def get_event_log(id):
     log, status = event_service.get_event_log_by_id(id)
     return success_response(data=log, message=f"Event log {id} fetched 성공", status=status)
+ 
 
-@event_log_bp.route('/training/<int:training_id>', methods=['POST'])
-def create_or_update_event_log(training_id):
-    try:
-        data = request.get_json().get('data')
-        result, status = event_service.handle_event_log(training_id, data)
-        return success_response(data=result, message="Event log created/updated 성공", status=status)
-    except ValidationError as err:
-        return jsonify({"error": err.messages}), 400
-
-@event_log_bp.route('/<int:id>', methods=['DELETE'])
-def delete_event_log(id):
-    result, status = event_service.delete_event_log(id)
-    return success_response(data=result, message="Event log deleted 성공", status=status)
-
-@event_log_bp.route('/multiple', methods=['POST'])
-def handle_multiple_event_logs():
+@event_log_bp.route('/<int:training_id>', methods=['PUT'])
+def update_event_log(training_id):
     try:
         data = request.get_json()
-        training_ids = data.get('training_ids', [])
-        event_data = data.get('data')
-        results = event_service.handle_multiple_events(training_ids, event_data)
-        return success_response(data=results, message="Multiple event logs processed 성공", status=200)
-    except ValidationError as err:
-        return jsonify({"error": err.messages}), 400
-
-@event_log_bp.route('/multiple', methods=['DELETE'])
-def delete_multiple_event_logs():
-    event_ids = request.get_json().get('event_ids', [])
-    results = event_service.delete_multiple_events(event_ids)
-    return success_response(data=results, message="Multiple event logs 삭제 성공", status=200)
+        result, status = event_service.handle_event_log(training_id, data.get('data'))
+        return success_response(data=result, message="Event log updated 성공", status=status)
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+    
+@event_log_bp.route('/<int:id>', methods=['DELETE'])
+def delete_event_log(id):
+    try:
+        result, status = event_service.delete_event_log(id)
+        return success_response(data=result, message="Event log deleted 성공", status=status)
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500

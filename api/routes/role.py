@@ -38,3 +38,5 @@ def update_role(id):
 def delete_role(id):
     result, status_code = role_service.delete_role(id)
     return jsonify({"message": result}), status_code
+
+

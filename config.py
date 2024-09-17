@@ -15,6 +15,7 @@ class Config:
     SWAGGER_CONFIG = {
         'app_name': "Email Test Server"
     }
+    JWT_SECRET_KEY= os.getenv('JWT_SECRET_KEY')
     IMAP_SERVER = os.getenv('IMAP_SERVER')
     USERNAME = os.getenv('IMAP_USERNAME')
     PASSWORD = os.getenv('IMAP_PASSWORD')

@@ -9,8 +9,10 @@ class Department(BaseModel,SerializableMixin):
     code2 = db.Column(db.String(50), nullable=False)
     korean_name = db.Column(db.String(100), nullable=False)
 
+ 
+    dept_target = db.Column(db.Text)
     employees = db.relationship('Employee', back_populates='department')
-    dept_target = db.Column(db.String(255))  # 리스트를 문자열로 저장
+    trainings  = db.Column(db.String(255))  # 리스트를 문자열로 저장
 
     def __repr__(self):
         return f'<Department {self.name}>'

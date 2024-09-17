@@ -1,3 +1,4 @@
+from models.event_log import EventLog
 from models.role import Role
 from api.services.department_service import get_all_departments
 from extensions import db
@@ -49,6 +50,10 @@ def get_role_by_id(role_id):
         }, 200
     except SQLAlchemyError as e:
         return f"데이터베이스 오류: {str(e)}", 500
+    
+
+from datetime import datetime
+
 
 def create_new_role(data):
     try:

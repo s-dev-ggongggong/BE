@@ -23,6 +23,7 @@ def handle_response(status_code, data=None, message=None):
     """
     response = {
         "status": status_code,
+        "data":data,
         "message": message or HTTP_STATUS_CODES.get(status_code, "알 수 없는 상태"),
     }
     

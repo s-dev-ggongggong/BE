@@ -66,21 +66,35 @@ class TrainingSchema(Base):
     id = fields.Int(dump_only=True)
     training_name = fields.Str(data_key="trainingName")
     training_desc = fields.Str(data_key="trainingDesc")
-    training_start = fields.DateTime(data_key="trainingStart", format='iso', load_format='iso', dump_format='%Y-%m-%d %H:%M:%S')
-    training_end = fields.DateTime(data_key="trainingEnd", format='iso', load_format='iso', dump_format='%Y-%m-%d %H:%M:%S')
-    created_at = fields.DateTime(dump_only=True, format='iso', load_format='iso', dump_format='%Y-%m-%d %H:%M:%S')
-    deleted_at = fields.DateTime(dump_only=True,format='iso', load_format='iso', dump_format='%Y-%m-%d %H:%M:%S')
+    training_start = fields.DateTime(data_key="trainingStart", format='iso', load_format='iso')
+    training_end = fields.DateTime(data_key="trainingEnd", format='iso', load_format='iso')
     resource_user = fields.Int(data_key="resourceUser")
     max_phishing_mail = fields.Int(data_key="maxPhishingMail")
-    dept_target = fields.List(fields.Str(), data_key="deptTarget", allow_none=True)
-    role_target = fields.List(fields.Str(), data_key="roleTarget", allow_none=True)
+    dept_target = fields.List(fields.Str(), data_key="deptTarget")
+    role_target = fields.List(fields.Str(), data_key="roleTarget")
+    created_at = fields.DateTime(dump_only=True, format='iso')
     is_finished = fields.Bool(dump_only=True)
-    is_deleted = fields.Boolean(dump_only=True)
     status = fields.Str(dump_only=True)
+    is_deleted = fields.Bool(dump_only=True)
+    deleted_at = fields.DateTime(dump_only=True, format='iso')
 
+    @pre_load
+    def process_targets(self, data, **kwargs):
+        if 'deptTarget' in data and isinstance(data['deptTarget'], list):
+            data['dept_target'] = data['deptTarget']
+        if 'roleTarget' in data and isinstance(data['roleTarget'], list):
+            data['role_target'] =  data['roleTarget']
+        return data
+
+    @post_dump
+    def process_targets_dump(self, data, **kwargs):
+        if 'dept_target' in data and isinstance(data['dept_target'], str):
+            data['deptTarget'] =  data['dept_target']  # ensure_ascii=False는 필요 없음
+        if 'role_target' in data and isinstance(data['role_target'], str):
+            data['roleTarget'] =  data['role_target']  # ensure_ascii=False는 필요 없음
+        return data
     class Meta(Base.Meta):
         model = Training
-        
 
 class EventLogSchema(Base):
     id = fields.Int(data_key="id")
@@ -95,14 +109,14 @@ class EventLogSchema(Base):
 
     @pre_load
     def process_ids(self, data, **kwargs):
-        for field in ['employeeId', 'emailId', 'roleId']:
+        for field in ['departmentId','employeeId', 'emailId', 'roleId']:
             if field in data and isinstance(data[field], list):
                 data[field.lower()] = json.dumps(data[field])
         return data
 
     @post_dump
     def process_ids_dump(self, data, **kwargs):
-        for field in ['employee_id', 'email_id', 'role_id']:
+        for field in ['departmentId','employee_id', 'email_id', 'role_id']:
             if field in data and isinstance(data[field], str):
                 try:
                     data[field] = json.loads(data[field])
@@ -157,10 +171,24 @@ class CompleteTrainingSchema(Base):
     completed_at = fields.DateTime(dump_only=True, format='iso', load_format='iso', dump_format='%Y-%m-%d %H:%M:%S')
     resource_user = fields.Int(data_key="resourceUser", required=True)
     max_phishing_mail = fields.Int(data_key="maxPhishingMail", required=True)
-    dept_target = fields.List(fields.Str(), data_key="deptTarget", required=True)
-    role_target = fields.List(fields.Str(), data_key="roleTarget", required=True)
+    dept_target = fields.List(fields.Str(), data_key="deptTarget")
+    role_target = fields.List(fields.Str(), data_key="roleTarget")
 
-   
+    @pre_load
+    def process_targets(self, data, **kwargs):
+        if 'deptTarget' in data and isinstance(data['deptTarget'], list):
+            data['dept_target'] = data['deptTarget']
+        if 'roleTarget' in data and isinstance(data['roleTarget'], list):
+            data['role_target'] =  data['roleTarget']
+        return data
+
+    @post_dump
+    def process_targets_dump(self, data, **kwargs):
+        if 'dept_target' in data and isinstance(data['dept_target'], str):
+            data['deptTarget'] =  data['dept_target']  # ensure_ascii=False는 필요 없음
+        if 'role_target' in data and isinstance(data['role_target'], str):
+            data['roleTarget'] =  data['role_target']  # ensure_ascii=False는 필요 없음
+        return data
     class Meta(Base.Meta):
         model = CompleteTraining
  
@@ -176,28 +204,33 @@ class EmailSchema(Base):
 
  
 class EventLogSchema(Base):
-    id = fields.Int(data_key="id")
-    action = fields.Str(data_key="action")
-    timestamp = fields.DateTime(data_key="timestamp",format='iso', load_format='iso', dump_format='%Y-%m-%d %H:%M:%S')
-    message = db.Column(db.String(255))  # 'message' 필드 추가
+    id = fields.Int(dump_only=True)
+    action = fields.Str(required=True)
+    timestamp = fields.DateTime(required=True)
+    training_id  = fields.Int(required=True)
+    employee_id = fields.Str( )
+    department_id = fields.Str( )
+    email_id = fields.Str()
+    role_id = fields.Str()
+    data = fields.Str()
+
+    @pre_load
+    def process_ids(self, data, **kwargs):
+        for field in ['department_id', 'employee_id', 'email_id', 'role_id']:
+            if field in data and isinstance(data[field], list):
+                data[field.lower()] = json.dumps(data[field])
+        return data
+
+    @post_dump
+    def process_ids_dump(self, data, **kwargs):
+        for field in ['department_id', 'employee_id', 'email_id', 'role_id']:
+            if field in data and isinstance(data[field], str):
+                try:
+                    data[field] = json.loads(data[field])
+                except json.JSONDecodeError:
+                    data[field] = []
+        return data
     
-    training_id = fields.Int(data_key="trainingId")
-    employee_id = fields.Int(data_key="employeeId")
-    department_id = fields.Int(data_key="departmentId")
-    data = fields.Dict(data_key="data")
-
-    @validates_schema
-    def validate_role_department(self, data, **kwargs):
-        # Validate that the role exists
-        role = Role.query.filter_by(name=data.get('role_name')).first()
-        if not role:
-            raise ValidationError(f"Role {data.get('role_name')} does not exist.")
-        
-        # Validate that the department exists
-        department = Department.query.filter_by(name=data.get('department_name')).first()
-        if not department:
-            raise ValidationError(f"Department {data.get('department_name')} does not exist.")
-
     class Meta(Base.Meta):
         model = EventLog
 

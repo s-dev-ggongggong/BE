@@ -24,7 +24,7 @@ def init_routes():
         (training_bp, '/training'),
         (department_bp, '/department'),
         (role_bp, '/role'),
-        (event_log_bp, '/eventlog'),
+        (event_log_bp, '/eventlog')
  
     ]
 

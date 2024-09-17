@@ -18,10 +18,6 @@ class Employee(BaseModel,SerializableMixin):
     role = db.relationship('Role', back_populates='employees')
     department = db.relationship('Department', back_populates='employees')
 
-    # Relationships to the Role and Department models
-    role = db.relationship('Role', back_populates='employees')
-    department = db.relationship('Department', back_populates='employees')
-
     def __repr__(self):
         return f'<Employee {self.name}>'
     

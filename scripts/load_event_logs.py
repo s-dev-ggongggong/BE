@@ -13,7 +13,10 @@ from models.email import Email
 from app import create_app
 import re
 
- 
+
+def parse_datetime(date_string):
+    return datetime.strptime(date_string, '%Y-%m-%d %H:%M:%S')
+
 def camel_to_snake(name):
     s1 = re.sub('(.)([A-Z][a-z]+)', r'\1_\2', name)
     return re.sub('([a-z0-9])([A-Z])', r'\1_\2', s1).lower()
@@ -22,24 +25,53 @@ def load_json(file_path):
     with open(file_path, 'r', encoding='utf-8') as file:
         return json.load(file)
 
+def ensure_list(field):
+    """Ensure the field is a properly formatted list."""
+    if isinstance(field, str):
+        # Clean up and convert string-formatted lists like "[1, 2]" to actual lists
+        field = field.strip("[]")  # Remove the square brackets
+        field = [int(x.strip()) for x in field.split(",") if x.strip()]  # Split and convert to list of integers
+    elif isinstance(field, int):
+        # Convert single integer to list
+        return [field]
+    return field if isinstance(field, list) else [field]
+
+
 def process_event(event_data, session):
-    processed = {}
-    for key, value in event_data.items():
-        snake_key = camel_to_snake(key)
-        if snake_key == 'id':
-            continue
-        processed[snake_key] = process_field(snake_key, value, session)
+    """Process each event data to ensure it is correctly formatted for insertion."""
+    if isinstance(event_data, EventLog):
+        event_data = event_data.to_dict()
     
-    if 'department_id' not in processed:
-        print(f"Warning: 'department_id' missing in event_data: {event_data}")
+    # Convert camelCase keys to snake_case
+    event_data = {camel_to_snake(k): v for k, v in event_data.items()}
+    event_data.pop('id', None)
+
+    # Ensure 'training_id' exists and is properly processed
+    if 'training_id' not in event_data or not event_data['training_id']:
+        print("Warning: Missing 'training_id' in event data.")
         return None
 
-    return processed if validate_event(processed, session) else None
+    for field in ['employee_id', 'department_id', 'email_id', 'role_id']:
+        if field in event_data:
+            event_data[field] = json.dumps(ensure_list(event_data.get(field, [])))
+
+    if 'timestamp' in event_data and isinstance(event_data['timestamp'], str):
+        event_data['timestamp'] = datetime.strptime(event_data['timestamp'], '%Y-%m-%d %H:%M:%S')    
+    
+    event_data['data'] = event_data.get('data', "").strip("\"")
+    # Convert lists to comma-separated strings for IDs
+ 
+    return event_data
+
+
+
 
 def process_field(key, value, session):
-    if key in ['employee_id', 'email_id']:
-        return ','.join(map(str, value if isinstance(value, list) else [value]))
-    elif key in ['department_id', 'role_id']:
+    
+    if key in ['employee_id', 'email_id', 'dept_id' ,'role_id' ]:
+        if isinstance(key, str):
+            return json.dumps(value if isinstance(value, list) else [value])
+    elif key == 'department_id':
         return value[0] if isinstance(value, list) else value
     elif key == 'timestamp':
         try:
@@ -48,8 +80,10 @@ def process_field(key, value, session):
             print(f"Warning: Invalid timestamp format '{value}': {ve}")
             return None
     elif key == 'data':
-        return value if value in ["", "agent"] else json.dumps(value)
+        return json.dumps(value) if value not in ["", "agent"] else value
     return value
+
+# Rest of the code remains the same...
 
 def validate_event(event, session):
     department_id = event.get('department_id')
@@ -62,9 +96,7 @@ def validate_event(event, session):
         print(f"Warning: Department ID {department_id} not found")
         return False
     
-    event['employee_id'] = validate_ids(Employee, event['employee_id'], session)
-    event['email_id'] = validate_ids(Email, event['email_id'], session)
-    
+ 
     return True
 
 def validate_ids(model, ids, session):
@@ -84,36 +116,25 @@ def update_or_create_event(event_data, session):
     existing_event = EventLog.query.filter_by(
         action=event_data['action'],
         timestamp=event_data['timestamp'],
-        training_id=event_data['training_id'],
-        department_id=event_data['department_id'],
-        employee_id=event_data['employee_id'],
-        email_id=event_data['email_id'],
-        role_id=event_data['role_id']
+        training_id=event_data['training_id']
     ).first()
 
     if existing_event:
-        if existing_event.data != event_data['data']:
-            existing_event.data = event_data['data']
+        for key, value in event_data.items():
+            setattr(existing_event, key, value)
     else:
         new_event = EventLog(**event_data)
         session.add(new_event)
-
-def handle_events(events_data, session):
-    for event_data in events_data:
-        processed_event = process_event(event_data, session)
-        if processed_event:
-            update_or_create_event(processed_event, session)
 
 def load_event_logs(file_path):
     app = create_app()
     with app.app_context():
         try:
-            db.session.query(EventLog).delete()  # Clear existing events
-            db.session.commit()
-            
             events_data = load_json(file_path)
-            handle_events(events_data, db.session)
-            
+            for event_data in events_data:
+                processed_event = process_event(event_data, db.session)
+                if processed_event:
+                    update_or_create_event(processed_event, db.session)
             db.session.commit()
             print(f"Processed and loaded {len(events_data)} events")
         except SQLAlchemyError as e:
@@ -121,6 +142,17 @@ def load_event_logs(file_path):
             print(f"An error occurred: {str(e)}")
         finally:
             db.session.close()
+
+def handle_events(events_data, session):
+    """Handle multiple events data."""
+    for event_data in events_data:
+        processed_event = process_event(event_data, session)
+        if processed_event:  # Ensure that None values are not processed
+            update_or_create_event(processed_event, session)
+        else:
+            print(f"Skipping event due to missing training_id: {event_data}")
+
+ 
 
 if __name__ == '__main__':
     load_event_logs('data/event_logs.json')

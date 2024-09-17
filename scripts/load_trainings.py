@@ -4,8 +4,13 @@ project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
 sys.path.insert(0, project_root)
 from app import create_app
 from extensions import db
+from flask import json
 from models.training import Training
 from scripts.utils import load_json, parse_datetime
+from datetime import datetime
+
+def parse_datetime(date_string):
+    return datetime.strptime(date_string, '%Y-%m-%d %H:%M:%S')
 
 def load_trainings(file_path):
     app = create_app()
@@ -21,8 +26,8 @@ def load_trainings(file_path):
                     'training_end': parse_datetime(item['trainingEnd']),
                     'resource_user': item['resourceUser'],
                     'max_phishing_mail': item['maxPhishingMail'],
-                    'dept_target': ','.join(item['deptTarget']),
-                    'role_target': ','.join(item['roleTarget'])
+                    'dept_target': json.dumps(item['deptTarget']),
+                    'role_target': json.dumps(item['roleTarget'])
                 }
                 training = Training(**training_data)
                 db.session.add(training)
