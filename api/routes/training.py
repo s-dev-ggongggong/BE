@@ -1,13 +1,17 @@
+import logging
 from flask import Blueprint, request, jsonify
 from api.services import training_service
 from utils.api_error_handlers import api_errorhandler
-from utils.http_status_handler import  server_error
-from api.services.training_service import create_training_service,update_training_service ,soft_delete_training, delete_training
+from utils.http_status_handler import server_error
+from api.services.training_service import create_training_service, update_training_service, soft_delete_training, delete_training, update_training_status
 from models.training import Training
 from models.schemas import training_schema
 from datetime import datetime
-from extensions import db
-from utils.logger import logging
+from extensions import db, session_scope
+from utils.logger import setup_logger
+
+logger = setup_logger(__name__)
+
 training_bp = Blueprint('training_bp', __name__)
 
 @api_errorhandler(training_bp)
@@ -43,6 +47,7 @@ def get_training(id):
             'error': f"Error fetching training: {str(e)}"
         }, 500
  
+
 @training_bp.route('/', methods=['POST'])
 def create_training():
     try:
@@ -63,17 +68,40 @@ def create_training():
         # 예외 발생 시 500 응답과 에러 메시지 반환
         logging.error(f"Exception occurred: {str(e)}")
         return jsonify({"error": str(e)}), 500
-    
+
 @training_bp.route('/all', methods=['POST'])
 def bulk_upload_trainings():
+    logger.info("Bulk upload training request received.")  # Log request start
     try:
-        data = request.json
-        response, status = training_service.bulk_training(data)
-        return jsonify(response), status
+        # Access the request JSON body
+        data = request.get_json()
+        if not isinstance(data, list):  # Ensure the incoming data is a list
+            return jsonify({"error": "Request body must be a list of training records."}), 400
+
+        # Call the service to handle bulk training creation
+        response_data, status_code = training_service.bulk_training(data)  # Fix double jsonify handling
+
+        logger.info(f"Bulk training operation completed with status {status_code}.")  # Log only status code (no response object)
+        
+        # Directly return `response_data` without wrapping it in `jsonify` again
+        return response_data, status_code
+
     except Exception as e:
+        logger.error(f"Bulk upload error: {str(e)}")
         return jsonify({"error": f"Bulk upload error: {str(e)}"}), 500
-
-
+    
+@training_bp.route('/status', methods=['POST'])
+def update_all_training_statuses():
+    try:
+        with session_scope() as session:
+            trainings = Training.query.filter(Training.is_deleted == False).all()
+            for training in trainings:
+                update_training_status(training, session)
+            session.commit()
+        return jsonify({"message": "All training statuses updated successfully"}), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+    
 # Route: Update a training
 @training_bp.route('/<int:id>', methods=['PUT'])
 def update_training_route(id):
@@ -93,7 +121,7 @@ def update_training_route(id):
 # db 에서 완전 삭제
 @training_bp.route('/<int:id>', methods=['DELETE'])
 def hard_delete_training_route(id):
-    response, status = training_service.delete_training(id)
+    response, status = training_service.delete_training_serivce(id)
     if status != 200:
         return jsonify(response), status
     return jsonify({"data": response, "message": f"Training ID {id} deleted successfully"}), status

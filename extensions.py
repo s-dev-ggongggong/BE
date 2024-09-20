@@ -3,14 +3,13 @@ from flask_marshmallow import Marshmallow
 from flask_migrate import Migrate
 from contextlib import contextmanager
 
-
 db = SQLAlchemy()
 ma = Marshmallow()
-migrate =Migrate()
+migrate = Migrate()
 
 @contextmanager
 def session_scope():
-    session=db.session
+    session = db.session
     try:
         yield session
         session.commit()
@@ -19,5 +18,3 @@ def session_scope():
         raise e
     finally:
         session.close()
-
- 

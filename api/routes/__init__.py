@@ -6,4 +6,5 @@ from . import training
 from . import department
 from . import role
 from . import event_log
+from . import complete_training
  

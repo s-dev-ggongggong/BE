@@ -1,19 +1,22 @@
- 
-from models.schemas import TrainingSchema ,training_schema
-from models.init import Training, EventLog, Employee ,CompleteTraining
-
-from extensions import db
-
-from marshmallow import ValidationError
-from flask import jsonify
-from datetime import datetime
-from sqlalchemy.sql import func
-import logging
-
-from sqlalchemy.exc import IntegrityError
-from flask import jsonify
 import json
+
+from flask import jsonify
+from marshmallow import ValidationError
+from sqlalchemy import func, or_
+from models.employee import Employee
+from models.schemas import TrainingSchema, training_schema
+from models.init import Training, EventLog, CompleteTraining
+from sqlalchemy.exc import SQLAlchemyError, IntegrityError
+from models.training import TrainingStatus
+from utils.http_status_handler import handle_response, server_error
+from flask_jwt_extended import create_access_token
+from utils.string_utils import convert_dict_keys_to_snake_case  # Assuming you have this function
 import logging
+from datetime import datetime
+from extensions import db ,session_scope
+
+logger = logging.getLogger(__name__)
+
 def convert_date_string_to_datetime(date_string):
     return datetime.strptime(date_string, '%Y-%m-%d %H:%M:%S')
 
@@ -47,58 +50,128 @@ def convert_date_string_to_datetime(date_string):
     except ValueError as e:
         logging.error(f"Date conversion error: {str(e)}")
         raise
+
+
+def create_event_log_for_training(training, session):
+    dept_targets = json.loads(training.dept_target)
+    role_targets = json.loads(training.role_target)
+    
+    employees = Employee.query.filter(
+        or_(Employee.department_id.in_(dept_targets),
+            Employee.role_id.in_(role_targets))
+    ).all()
+    
+    employee_ids = [emp.id for emp in employees]
+    email_ids = [email.id for emp in employees for email in emp.emails]
+
+    event_log = EventLog(
+        action="targetSetting",
+        timestamp=training.training_start,
+        training_id=training.id,
+        department_id=json.dumps(dept_targets),
+        role_id=json.dumps(role_targets),
+        employee_id=json.dumps(employee_ids),
+        email_id=json.dumps(email_ids),
+        data="agent"
+    )
+    session.add(event_log)
+
+def update_training_status(training, session):
+    now = datetime.utcnow()
+    if training.training_start <= now < training.training_end:
+        training.status = TrainingStatus.RUN
+    elif now >= training.training_end:
+        training.status = TrainingStatus.FIN
+        training.is_finished = True
+        
+        # Update EventLog when training is finished
+        event_log = EventLog.query.filter_by(training_id=training.id).first()
+        if event_log:
+            event_log.action = "remove"
+            event_log.timestamp = now
+
+def delete_training(training, session):
+    training.is_deleted = True
+    training.deleted_at = datetime.utcnow()
+    
+    # You might want to update or delete the associated EventLog
+    event_log = EventLog.query.filter_by(training_id=training.id).first()
+    if event_log:
+        session.delete(event_log)
+        
 # 트레이닝 생성 함수
-
-
 def create_training_service(data):
-    try:
-        # JSON 데이터에서 필요한 필드 추출 및 매핑
-        mapped_data = {
-            'training_name': data.get('trainingName'),
-            'training_desc': data.get('trainingDesc'),
-            'training_start': convert_date_string_to_datetime(data.get('trainingStart')),
-            'training_end': convert_date_string_to_datetime(data.get('trainingEnd')),
-            'dept_target': data.get('deptTarget', []),  # JSON encoding handled by JSONEncodedDict
-            'role_target': data.get('roleTarget', []),  # JSON encoding handled by JSONEncodedDict
-            'max_phishing_mail': data.get('maxPhishingMail'),
-            'resource_user': data.get('resourceUser')
-        }
+    with session_scope() as session:
+        try:
+            # Convert and validate incoming data
+            mapped_data = {
+                'training_name': data.get('trainingName', '').strip(),
+                'training_desc': data.get('trainingDesc', '').strip(),
+                'training_start': convert_date_string_to_datetime(data.get('trainingStart')),
+                'training_end': convert_date_string_to_datetime(data.get('trainingEnd')),
+                'dept_target': json.dumps(data.get('deptTarget')),
+                'role_target': json.dumps(data.get('roleTarget')),
+                'resource_user': data.get('resourceUser'),
+                'max_phishing_mail': data.get('maxPhishingMail')
+            }
+            mapped_data['dept_target'] = json.dumps(mapped_data['dept_target'][0] if isinstance(mapped_data['dept_target'], list) else mapped_data['dept_target'])
+            mapped_data['role_target'] = json.dumps(mapped_data['role_target'][0] if isinstance(mapped_data['role_target'], list) else mapped_data['role_target'])
 
-        logging.info(f"Mapped data: {mapped_data}")
 
-        # Check for existing records with the same values
-        existing_training = Training.query.filter_by(
-            training_name=mapped_data['training_name'],
-            training_desc=mapped_data['training_desc'],
-            training_start=mapped_data['training_start'],
-            training_end=mapped_data['training_end'],
-            max_phishing_mail=mapped_data['max_phishing_mail'],
-            resource_user=mapped_data['resource_user'],
-            dept_target=mapped_data['dept_target'],
-            role_target=mapped_data['role_target']
-        ).first()
+            # Log the incoming request data for debugging
+            logger.info(f"Mapped data: {mapped_data}")
 
-        if existing_training:
-            return jsonify({"error": "A training record with these details already exists."}), 409
+            # Validate that mandatory fields are provided and not empty
+            for field in ['training_name', 'training_desc', 'training_start', 'training_end', 'resource_user']:
+                if not mapped_data[field]:
+                    return handle_response(400, message=f"{field.replace('_', ' ').capitalize()} is required and cannot be empty.")
 
-        # Training 객체 생성 및 데이터베이스에 저장
-        new_training = Training(**mapped_data)
-        db.session.add(new_training)
-        db.session.commit()
+            if not mapped_data['dept_target'] or not mapped_data['role_target']:
+                return handle_response(400, message="Department target and role target must have at least one non-empty value each.")
 
-        # 성공적으로 저장된 데이터를 반환
-        response_data = training_schema.dump(new_training)
-        return jsonify({'message': 'Training created successfully', 'data': response_data}), 201
+            # Check for existing records with the same values
+            existing_training = Training.query.filter(
+                Training.training_name == mapped_data['training_name'],
+                Training.training_desc == mapped_data['training_desc'],
+                Training.training_start == mapped_data['training_start'],
+                Training.training_end == mapped_data['training_end'],
+                Training.max_phishing_mail == mapped_data['max_phishing_mail'],
+                Training.resource_user == mapped_data['resource_user'],
+                Training.dept_target == mapped_data['dept_target'],
+                Training.role_target == mapped_data['role_target']
+            ).first()
 
-    except IntegrityError as e:
-        logging.error(f"IntegrityError: {str(e)}")
-        db.session.rollback()
-        return jsonify({"error": "Database integrity error"}), 400
+            if existing_training:
+                return handle_response(409, message="A training record with these details already exists.")
 
-    except Exception as e:
-        logging.error(f"Exception occurred: {str(e)}")
-        db.session.rollback()
-        return jsonify({"error": str(e)}), 500
+            # Create the new training object and save to the database
+            new_training = Training(**mapped_data)
+            session.add(new_training)
+            session.flush()
+
+            create_event_log_for_training(new_training, session)
+            update_training_status(new_training, session)
+            
+            session.commit()
+  
+            # Serialize the created training and return success response
+            response_data = training_schema.dump(new_training)
+            return handle_response(201, data=response_data, message="Training created successfully.")
+
+        except IntegrityError as e:
+            logger.error(f"IntegrityError: {str(e)}")
+            db.session.rollback()
+            return handle_response(400, message="Database integrity error.")
+
+        except SQLAlchemyError as e:
+            logger.error(f"SQLAlchemyError: {str(e)}")
+            db.session.rollback()
+            return server_error(f"An error occurred while handling the request: {str(e)}")
+
+        except Exception as e:
+            logger.error(f"Exception occurred: {str(e)}")
+            db.session.rollback()
+            return server_error(f"An unexpected error occurred: {str(e)}")
  
 # 모든 트레이닝 조회 함수
 def get_all_trainings():
@@ -124,6 +197,7 @@ def get_all_trainings():
             },
             'message': "Trainings fetch failed"
         }, 500
+    
 # 특정 트레이닝 조회 함수
 def get_training(id):
     try:
@@ -145,127 +219,133 @@ def get_training(id):
     
 
 # 트레이닝 업데이트 함수
- 
-
-from sqlalchemy.exc import IntegrityError
-import json
- 
-
-from sqlalchemy.exc import IntegrityError
-import json
-from flask import jsonify
-
-from sqlalchemy.exc import IntegrityError
-import json
-from flask import jsonify
-
-
-from sqlalchemy.exc import IntegrityError
-import json
-from flask import jsonify
-
-
-
-from sqlalchemy.exc import IntegrityError
-import json
-from flask import jsonify, Response
-
-from sqlalchemy.exc import IntegrityError
-import json
-from flask import jsonify
-
-from sqlalchemy.exc import IntegrityError
-import json
-from flask import jsonify, Response
-
-from sqlalchemy.exc import IntegrityError
-import json
-from flask import jsonify
-
 
 def update_training_service(id, data):
     try:
-        training = Training.query.get(id)
-        if not training:
-            return {"message": "Training not found"}, 404
-        
-        new_dept_target = data.get('deptTarget', training.dept_target)
-        new_role_target = data.get('roleTarget', training.role_target)
-        
-        new_training_start = convert_date_string_to_datetime(data.get('trainingStart', training.training_start.strftime('%Y-%m-%d %H:%M:%S')))
-        new_training_end = convert_date_string_to_datetime(data.get('trainingEnd', training.training_end.strftime('%Y-%m-%d %H:%M:%S')))
+        with session_scope() as session:
 
-        if (new_dept_target == training.dept_target and
-            new_role_target == training.role_target and
-            data.get('trainingName', training.training_name) == training.training_name and
-            data.get('trainingDesc', training.training_desc) == training.training_desc and
-            new_training_start == training.training_start and
-            new_training_end == training.training_end and
-            data.get('resourceUser', training.resource_user) == training.resource_user and
-            data.get('maxPhishingMail', training.max_phishing_mail) == training.max_phishing_mail):
-            return {"message": "No changes detected"}, 200
+            # Find the training record
+            training = Training.query.get(id)
+            if not training:
+                return handle_response(404, message="Training not found")
 
-        duplicate_training = Training.query.filter(
-            Training.training_name == data.get('trainingName'),
-            Training.training_desc == data.get('trainingDesc'),
-            Training.training_start == new_training_start,
-            Training.training_end == new_training_end
-        ).first()
+            # Prepare updated data
+            updated_data = {}
+            if 'trainingName' in data and data['trainingName'].strip():
+                updated_data['training_name'] = data['trainingName'].strip()
+            if 'trainingDesc' in data and data['trainingDesc'].strip():
+                updated_data['training_desc'] = data['trainingDesc'].strip()
+            if 'trainingStart' in data and data['trainingStart'].strip():
+                updated_data['training_start'] = convert_date_string_to_datetime(data['trainingStart'].strip())
+            if 'trainingEnd' in data and data['trainingEnd'].strip():
+                updated_data['training_end'] = convert_date_string_to_datetime(data['trainingEnd'].strip())
+            if 'deptTarget' in data:
+                updated_data['dept_target'] = [item.strip() for item in data['deptTarget'] if item.strip()]
+            if 'roleTarget' in data:
+                updated_data['role_target'] = [item.strip() for item in data['roleTarget'] if item.strip()]
+            if 'resourceUser' in data:
+                # Handle resourceUser as either string or integer
+                if isinstance(data['resourceUser'], str) and data['resourceUser'].strip():
+                    updated_data['resource_user'] = data['resourceUser'].strip()
+                elif isinstance(data['resourceUser'], int):
+                    updated_data['resource_user'] = data['resourceUser']
+            if 'maxPhishingMail' in data and data['maxPhishingMail'] is not None:
+                updated_data['max_phishing_mail'] = data['maxPhishingMail']
 
-        if duplicate_training and duplicate_training.id != id:
-            return {"error": "Duplicate training found"}, 400
+            # Check if any fields were actually updated
+            if not updated_data:
+                return handle_response(400, message="No valid updates provided.")
 
-        training.dept_target = new_dept_target
-        training.role_target = new_role_target
-        training.training_name = data.get('trainingName', training.training_name)
-        training.training_desc = data.get('trainingDesc', training.training_desc)
-        training.training_start = new_training_start
-        training.training_end = new_training_end
-        training.resource_user = data.get('resourceUser', training.resource_user)
-        training.max_phishing_mail = data.get('maxPhishingMail', training.max_phishing_mail)
-        
-        db.session.commit()
+            # Check for existing records with the same values
+            existing_query = Training.query.filter(Training.id != id)
+            for key, value in updated_data.items():
+                existing_query = existing_query.filter(getattr(Training, key) == value)
+            
+            existing_training = existing_query.first()
+            if existing_training:
+                return handle_response(409, message="Another training record with these details already exists.")
 
-        return {"message": "Training updated successfully"}, 200
+            # Update the training object
+            for key, value in updated_data.items():
+                setattr(training, key, value)
+            
+            update_training_status(training, session)
+            # Commit the updates to the database
+            session.commit()
 
-    except IntegrityError:
+            return handle_response(200, message="Training updated successfully")
+    
+    except IntegrityError as e:
         db.session.rollback()
-        return {"error": "Database integrity error"}, 400
+        logger.error(f"IntegrityError: {str(e)}")
+        return handle_response(400, message="Database integrity error.")
+
     except Exception as e:
         db.session.rollback()
-        return {"error": str(e)}, 500
+        logger.error(f"Exception occurred: {str(e)}")
+        return server_error(f"An unexpected error occurred: {str(e)}")
 
-
+# 여기서 bulk
+def handle_res(status_code, data=None, message=None):
+    response = {
+        "status": status_code,
+        "message": message or "No message provided",  # Default message
+        "data": data if data is not None else {}  # Ensure JSON serializable structure
+    }
     
+    return jsonify(response), status_code  # Properly return a JSON response
+ 
 
-def delete_training(id):
+#### Updated `bulk_training` Function
+# api/services/training_service.py
+from sqlalchemy.exc import SQLAlchemyError
+
+def bulk_training(data):
+    if not data:
+        return handle_response(400, message="요청 본문이 비어있습니다.")
+
+    successful_trainings = []
+    failed_trainings = []
+    for training_data in data:
+        result = create_training_service(training_data)
+        if result[1] == 201:  # 성공적으로 생성된 경우
+            successful_trainings.append(result[0]['data'])
+        else:
+                failed_trainings.append({
+                    "data": training_data,
+                    "error": result[0]['message']
+                })
+
+    return handle_response(200, data={
+        "successful_trainings": successful_trainings,
+        "failed_trainings": failed_trainings
+    })
+
+def delete_training_serivce(id):
     try:
-        training = Training.query.get_or_404(id)
+        with session_scope() as session:
+            training = Training.query.get(id)
+            if not training:
+                return {"error": "Training not found"}, 404
+            # 필수 필드만 추출하고, dept_target과 role_target을 적절히 처리
+            # training_data = {
+            #     'original_id': training.id,
+            #     'training_name': training.training_name,
+            #     'training_desc': training.training_desc,
+            #     'training_start': training.training_start,
+            #     'training_end': training.training_end,
+            #     'resource_user': training.resource_user,
+            #     'max_phishing_mail': training.max_phishing_mail,
+            #     'dept_target': training.dept_target,
+            #     'role_target': training.role_target
+            # }
 
-        # 필수 필드만 추출하고, dept_target과 role_target을 적절히 처리
-        training_data = {
-            'original_id': training.id,
-            'training_name': training.training_name,
-            'training_desc': training.training_desc,
-            'training_start': training.training_start,
-            'training_end': training.training_end,
-            'resource_user': training.resource_user,
-            'max_phishing_mail': training.max_phishing_mail,
-            'dept_target': training.dept_target,
-            'role_target': training.role_target
-        }
+            # CompleteTraining 인스턴스 생성
+            delete_training(training,session)
 
-        # CompleteTraining 인스턴스 생성
-        deleted_training = CompleteTraining(**training_data)
+            session.commit()
 
-        # CompleteTraining 테이블에 추가
-        db.session.add(deleted_training)
-
-        # 기존 Training 데이터 삭제
-        db.session.delete(training)
-        db.session.commit()
-
-        return {"message": "트레이닝이 성공적으로 삭제되었습니다."}, 200
+            return {"message": "트레이닝이 성공적으로 삭제되었습니다."}, 200
 
     except ValidationError as err:
         db.session.rollback()
@@ -283,81 +363,10 @@ def view_training_event_logs(id):
     except Exception as e:
         return {"error":f"이벤트 로그 조회 중 오류 발생: {str(e)}"}
 
-# 부서 및 역할 기준으로 사용자 필터링
-def filter_users_by_criteria(department_id, role_id):
-    try:
-        query = Employee.query
-        if department_id:
-            query = query.filter_by(department_id=department_id)
-        if role_id:
-            query = query.filter_by(role_id=role_id)
-        employees = query.all()
-        result = [{"id": emp.id, "name": emp.name} for emp in employees]
-        return result.to_dict() ,200
-    except Exception as e:
-        return {"error":f"사용자 필터링 중 오류 발생: {str(e)}"}
 
+ 
 
-# 벌크 트레이닝 생성 함수
-def bulk_training(data):
-    if not data:
-        return {"error": "요청 본문이 비어있습니다."}, 409
-    
-    trainings = []
-    duplicate_trainings = []
-    invalid_trainings = []
-    
-    for training_data in data:
-            try:
-                validated_data = TrainingSchema.load(training_data)  # 각 트레이닝 데이터 검증
-                existing_training = Training.query.filter_by(
-                    training_name=validated_data["training_name"],
-                    training_desc=validated_data["training_desc"],
-                    training_start=validated_data["training_start"],
-                    training_end=validated_data["training_end"]
-                ).first()
-
-                if existing_training:
-                    duplicate_trainings.append({
-                        "training_name": validated_data["training_name"],
-                        "training_id": existing_training.id
-                    })
-                else:
-                    trainings.append(Training(**validated_data))  # Add valid training
-            except ValidationError as e:
-                invalid_trainings.append({"error": str(e.messages), "data": training_data})
-        
-    if trainings:
-        db.session.add_all(trainings)
-        db.session.commit()
-
-    return {
-            "message": "Bulk training 성공",
-            "valid_trainings": [t.to_dict() for t in trainings],
-            "duplicate_trainings": duplicate_trainings,
-            "invalid_trainings": invalid_trainings
-        },201
-
-def complete_training(training_id):
-    training = Training.query.with_deleted().filter_by(id=training_id).first()
-    
-    if training:
-        complete = CompleteTraining(
-            original_id=training.id,
-            training_name=training.training_name,
-            training_desc=training.training_desc,
-            training_start=training.training_start,
-            training_end=training.training_end,
-            resource_user=training.resource_user,
-            max_phishing_mail=training.max_phishing_mail,
-            dept_target=training.dept_target,
-            role_target=training.role_target,
-            completed_at=datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S')
-        )
-        db.session.add(complete)
-        db.session.commit()
-
-from datetime import datetime
+ 
 
 def soft_delete_training(id):
     training = Training.query.get(id)
@@ -371,8 +380,8 @@ def soft_delete_training(id):
 
  
 
+# Example function for getting random employees.
 def get_random_employees(training_id, resource_user_count):
-    # 랜덤으로 지정된 수의 직원을 선택하는 쿼리
     training = Training.query.get(training_id)
     if training:
         random_employees = Employee.query.order_by(func.random()).limit(resource_user_count).all()

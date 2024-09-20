@@ -14,30 +14,34 @@ def handle_api_error(error):
     return jsonify({"error": str(error)}), 500
 
 @employee_bp.route('/', methods=['GET'])
-def get_users():
-    users, status = employee_service.get_all_users()
-    return handle_response(status, data=users, message="Employees retrieved successfully")
+def get_employees():
+    department_id = request.args.get('department_id', type=int)
+    role_id = request.args.get('role_id', type=int)
+    employee_id = request.args.get('employee_id', type=int)
+    search = request.args.get('search')
 
-@employee_bp.route('/<int:id>', methods=['GET'])
-def get_user(id):
-    user, status = employee_service.get_user_by_id(id)
-    if status == 404:
-        return not_found(f"Employee with ID {id} not found")
-    return handle_response(status, data=user, message="Employee retrieved successfully")
+    result, status_code = employee_service.get_users(
+        department_id=department_id,
+        role_id=role_id,
+        employee_id=employee_id,
+        search=search
+    )
 
-@employee_bp.route('/', methods=['POST'])
-def add_user():
+    return jsonify(result), status_code
+@employee_bp.route('/employees', methods=['POST'])
+def create_employee():
     data = request.get_json()
     if not data:
-        return bad_request("Request body is empty")
-    user, status = employee_service.create_user(data)
-    return handle_response(status, data=user, message="Employee created successfully")
+        return jsonify({"error": "해당 필드를 다 기입하세요"}), 400
+    response, status_code = employee_service.create_user(data)
+    return jsonify(response), status_code
 
 @employee_bp.route('/with-training', methods=['GET'])
 def get_users_with_trainings():
     users, status = employee_service.get_users_with_trainings()
     return handle_response(status, data=users, message="Employees with trainings retrieved successfully")
 # employee.py
+
 
 
 

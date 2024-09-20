@@ -4,7 +4,7 @@ from utils.api_error_handlers import api_errorhandler
 from utils.http_status_handler import  server_error
 from api.services.training_service import update_training_service
 from models.complete_train import CompleteTraining
-from models.schemas import complete_training_schema
+from models.schemas import complete_training_schema, complete_trainings_schema
 from datetime import datetime
 
 complete_bp = Blueprint('complete_bp', __name__)
@@ -34,17 +34,7 @@ def get_training(id):
         return jsonify({"error": f"Error fetching training: {str(e)}"}), 500
 # Route: Create new training
 
-@complete_bp.route('/', methods=['POST'])
-def create_training():
-    data = request.get_json()
-    if not data:
-        return jsonify({"error":"No data provided"}), 400
-    response, status = training_service.create_training(data)
-    if status != 201:
-        return jsonify({"error": response.get("error", "Unknown error occurred")}), status
-    return jsonify({"data": response, 'message': "Training created successfully"}), status
-
-
+ 
 # Route: Update a training
 @complete_bp.route('/<int:id>', methods=['PUT'])
 def update_training_route(id):
@@ -60,11 +50,4 @@ def update_training_route(id):
     except Exception as e:
         return jsonify({"error": f"Error updating training: {str(e)}"}), 500
 
-# Route: Delete a training
-@complete_bp.route('/<int:id>', methods=['DELETE'])
-def delete_training(id):
-    response, status = training_service.delete_training(id)
-    if status != 200:
-        return jsonify(response), status
-    return jsonify({"data": response, "message": f"Training ID {id} deleted successfully"}), status
  

@@ -14,9 +14,13 @@ class Email(BaseModel, SerializableMixin):
     sent_date = db.Column(db.DateTime, default=datetime.utcnow)
     is_phishing = db.Column(db.Boolean, default=False)
     employee_id = db.Column(db.Integer, db.ForeignKey('employees.id'), nullable=True)
-    
+    employee = db.relationship('Employee', backref='emails', lazy=True)
+
     training_id = db.Column(db.Integer,db.ForeignKey('trainings.id'),nullable=True)
     completed_training_id = db.Column(db.Integer, db.ForeignKey('complete_trainings.id'), nullable=True)
+
+    department_name  = db.Column(db.String(100), db.ForeignKey('departments.name'), nullable=True)
+    department = db.relationship('Department', backref='emails', lazy=True,foreign_keys=[department_name])
 
     def to_dict(self):
         return {

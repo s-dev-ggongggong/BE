@@ -12,30 +12,30 @@ class TrainingStatus(Enum):
     FIN = "FIN"
 
 class JSONEncodedDict(TypeDecorator):
-    impl = TEXT
+    impl = db.Text
 
     def process_bind_param(self, value, dialect):
         if value is not None:
-            return json.dumps(value, ensure_ascii=False)  # ensure_ascii=False 추가
+            return json.dumps(value, ensure_ascii=False)
         return value
 
     def process_result_value(self, value, dialect):
         if value is not None:
             return json.loads(value)
         return value
-
+    
 class Training(BaseModel):
     __tablename__ = 'trainings'
     
-    id = db.Column(db.Integer, primary_key=True,autoincrement=True)
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     training_name = db.Column(db.String(255), nullable=False)
     training_desc = db.Column(db.Text, nullable=False)
     training_start = db.Column(db.DateTime, nullable=False)
     training_end = db.Column(db.DateTime, nullable=False)
     resource_user = db.Column(db.Integer, nullable=False)
     max_phishing_mail = db.Column(db.Integer, nullable=False)
-    dept_target = db.Column(JSONEncodedDict, nullable=False)
-    role_target = db.Column(JSONEncodedDict, nullable=False)
+    dept_target = db.Column(db.Text, nullable=False)
+    role_target = db.Column(db.Text, nullable=False)
 
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     is_finished = db.Column(db.Boolean, default=False)
@@ -44,3 +44,15 @@ class Training(BaseModel):
     is_deleted = db.Column(db.Boolean, default=False)
     deleted_at = db.Column(db.DateTime, nullable=True)
 
+    
+    @validates('dept_target', 'role_target')
+    def validate_json_fields(self, key, value):
+        if isinstance(value, (list, dict)):
+            return json.dumps(value)
+        elif isinstance(value, str):
+            try:
+                json.loads(value)  # JSON 형식 검증
+                return value
+            except json.JSONDecodeError:
+                raise ValueError(f"Invalid JSON for {key}")
+        raise ValueError(f"Invalid type for {key}: {type(value)}")

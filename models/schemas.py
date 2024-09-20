@@ -1,5 +1,5 @@
 from flask import json
-from marshmallow import fields, validates, ValidationError,validates_schema, pre_load, post_dump
+from marshmallow import fields, post_load, validates, ValidationError,validates_schema, pre_load, post_dump
 from extensions import ma, db
 from models.department import Department
 from models.role import Role
@@ -19,7 +19,7 @@ class Base(ma.SQLAlchemyAutoSchema):
 # Define schemas with data_key for camelCaseem
 class DepartmentSchema(Base):
     id = fields.Int(data_key="id",dump_only=True)
-    name = fields.Str(data_key="name",dump_only=True),
+    name = fields.Str(data_key="name",dump_only=True)
     code1 = fields.Str(data_key="code1")
     code2 = fields.Str(data_key="code2")
     korean_name = fields.Str(data_key="koreanName")
@@ -56,7 +56,7 @@ class EmployeeSchema(Base):
     department_name = fields.Str(data_key="departmentName")
     role_name = fields.Str(data_key="roleName")
     admin_id = fields.Str(data_key="adminId", dump_only=True)
-    admin_pw = fields.Str(data_key="adminPw", dump_only=True)
+    admin_pw = fields.Str(data_key="adminPw", required=True, load_only=True)
 
     class Meta(Base.Meta):
         model = Employee
@@ -70,29 +70,36 @@ class TrainingSchema(Base):
     training_end = fields.DateTime(data_key="trainingEnd", format='iso', load_format='iso')
     resource_user = fields.Int(data_key="resourceUser")
     max_phishing_mail = fields.Int(data_key="maxPhishingMail")
-    dept_target = fields.List(fields.Str(), data_key="deptTarget")
-    role_target = fields.List(fields.Str(), data_key="roleTarget")
+    dept_target = fields.Str(data_key="deptTarget")
+    role_target = fields.Str(data_key="roleTarget")
     created_at = fields.DateTime(dump_only=True, format='iso')
     is_finished = fields.Bool(dump_only=True)
     status = fields.Str(dump_only=True)
     is_deleted = fields.Bool(dump_only=True)
-    deleted_at = fields.DateTime(dump_only=True, format='iso')
-
+    deleted_at = fields.DateTime(dump_only=True, format='iso', load_format='iso')
+    
+ 
     @pre_load
     def process_targets(self, data, **kwargs):
-        if 'deptTarget' in data and isinstance(data['deptTarget'], list):
-            data['dept_target'] = data['deptTarget']
-        if 'roleTarget' in data and isinstance(data['roleTarget'], list):
-            data['role_target'] =  data['roleTarget']
+        for field in ['deptTarget', 'roleTarget']:
+            if field in data and isinstance(data[field], str):
+                try:
+                    data[field] = json.loads(data[field])
+                except json.JSONDecodeError:
+                    pass  # 이미 JSON 문자열인 경우
         return data
-
+ 
+    
     @post_dump
     def process_targets_dump(self, data, **kwargs):
-        if 'dept_target' in data and isinstance(data['dept_target'], str):
-            data['deptTarget'] =  data['dept_target']  # ensure_ascii=False는 필요 없음
-        if 'role_target' in data and isinstance(data['role_target'], str):
-            data['roleTarget'] =  data['role_target']  # ensure_ascii=False는 필요 없음
+        for field in ['deptTarget', 'roleTarget']:
+            if field in data and isinstance(data[field], str):
+                try:
+                    data[field] = json.loads(data[field])
+                except json.JSONDecodeError:
+                    pass  # 이미 파싱된 경우
         return data
+    
     class Meta(Base.Meta):
         model = Training
 
@@ -196,9 +203,32 @@ class EmailSchema(Base):
     id = fields.Int(data_key="id")
     subject = fields.Str(data_key="subject")
     body = fields.Str(data_key="body")
-    sender = fields.Str(data_key="sender")
-    recipient = fields.Str(data_key="recipient")
-    sent_date = fields.DateTime(data_key="sentDate",format='iso', load_format='iso', dump_format='%Y-%m-%d %H:%M:%S')
+    sender = fields.Str(data_key="from")
+    recipient = fields.Str(data_key="to")
+    sent_date = fields.DateTime(
+        data_key="sentDate",
+        format='iso',
+        load_format='iso',
+        dump_format='%Y-%m-%d %H:%M:%S'
+    )
+    employee = fields.Nested(
+        'EmployeeSchema',
+        only=['id', 'name'],
+        data_key='employee',
+        dump_only=True
+    )
+    emails = fields.List(
+        fields.Nested('EmailSchema', exclude=['employee']),
+        data_key='emails',
+        dump_only=True
+    )
+    department = fields.Nested(
+        'DepartmentSchema',
+        only=['name', 'code1', 'korean_name'],
+        data_key='department'
+    )
+
+
     class Meta(Base.Meta):
         model = Email
 

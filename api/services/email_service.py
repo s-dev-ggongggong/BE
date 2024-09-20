@@ -1,8 +1,13 @@
 import sys
 import os
+
+from marshmallow import ValidationError
+
+from api.services.employee_service import get_employees_by_filters
+from models.department import Department
 project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
 sys.path.insert(0, project_root)
-from extensions import db
+from extensions import db ,session_scope
  
 from models.schemas import email_schema, emails_schema
 from utils.logger import setup_logger
@@ -16,15 +21,22 @@ import random
 # Set up logger
 logger = setup_logger(__name__)
 
-def get_emails():
+def get_emails(search=None, employee_id=None):
     try:
-        emails = Email.query.all()
+        query = Email.query
+
+        if employee_id:
+            query = query.filter(Email.employee_id == employee_id)
+
+        if search:
+            query = query.join(Employee).filter(Employee.name.ilike(f'%{search}%'))
+
+        emails = query.all()
         result = emails_schema.dump(emails)
-        logger.info("Successfully fetched emails")
         return {"data": result, "message": "Emails fetched successfully.", "status_code": 200}
     except Exception as e:
-        logger.error(f"Error fetching emails: {str(e)}", exc_info=True)
         return {"error": f"Error fetching emails: {str(e)}", "status_code": 500}
+    
 
 def get_email(email_id):
     try:
@@ -37,25 +49,64 @@ def get_email(email_id):
 
 def create_email(data):
     try:
-        email = Email(
-            subject=data['subject'],
-            body=data['body'],
-            sender=data['from'],
-            recipient=data['to'],
+        # Validate and deserialize data
+        email_data = email_schema.load(data)
+        session = db.session
+
+        # Prepare department filters
+        department_filters = []
+        if 'department' in data:
+            dept_data = data['department']
+            if 'name' in dept_data and dept_data['name']:
+                department_filters.append(Department.name == dept_data['name'])
+            if 'code1' in dept_data and dept_data['code1']:
+                department_filters.append(Department.code1 == dept_data['code1'])
+            if 'code2' in dept_data and dept_data['code2']:
+                department_filters.append(Department.code2 == dept_data['code2'])
+            if 'korean_name' in dept_data and dept_data['korean_name']:
+                department_filters.append(Department.korean_name == dept_data['korean_name'])
+
+        role_name = data.get('roleName')
+
+        # Ensure at least one filter is provided
+        if not department_filters and not role_name:
+            return {"error": "At least one department field or roleName must be provided."}, 400
+
+        # Get employees using the employee service function
+        employees = get_employees_by_filters(
+            role_name=role_name,
+            department_filters=department_filters
         )
-        db.session.add(email)
-        db.session.commit()
 
-        from api.services.training_service import check_and_set_action_for_email
-        
-        action = check_and_set_action_for_email(email)
-        if action:
-            email.action = action
-            db.session.commit()
+        if not employees:
+            return {"error": "No employees found matching the criteria."}, 404
 
-        return {"data": email_schema.dump(email), "message": "Email created successfully.", "status_code": 201}
+        # Create emails for the filtered employees
+        sent_emails = []
+        for employee in employees:
+            new_email = Email(
+                subject=email_data['subject'],
+                body=email_data['body'],
+                sender=email_data['from'],
+                recipient=employee.email,
+                sent_date=email_data.get('sent_date', datetime.utcnow()),
+                is_phishing=email_data.get('is_phishing', False),
+                employee_id=employee.id,
+                department_id=employee.department_id
+            )
+            session.add(new_email)
+            sent_emails.append(new_email)
+
+        session.commit()
+        result = emails_schema.dump(sent_emails)
+        return {"data": result, "message": "Emails sent successfully.", "status_code": 201}
+    except ValidationError as err:
+        return {"error": err.messages}, 400
     except Exception as e:
-        return {"error": f"Error during email creation: {str(e)}", "status_code": 500}
+        session.rollback()
+        return {"error": f"Error during email creation: {str(e)}"}, 500
+
+          
 
 def update_email(email_id, data):
     try:
@@ -64,7 +115,6 @@ def update_email(email_id, data):
         email.body = data.get('body', email.body)
         email.sender = data.get('from', email.sender)
         email.recipient = data.get('to', email.recipient)
-        email.target_aid = data.get('target_aid', email.target_aid)
         email.is_phishing = data.get('is_phishing', email.is_phishing)
 
         db.session.commit()
@@ -172,15 +222,19 @@ def check_and_set_action_for_email(email_id):
     try:
         email = Email.query.get(email_id)
         if not email:
-            return {"error": "Email not found", "status_code": 404}
+            return None
         
-        training = Training.query.get(email.training_id) if hasattr(email, 'training_id') else None
-        if training and training.training_start <= datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S'):
-            action = "targetSetting"
-            email.action = action
+        training = Training.query.filter(
+            Training.training_start <= email.sent_date,
+            Training.training_end >= email.sent_date
+        ).first()
+
+        if training:
+            email.training_id = training.id
+            email.action = "targetSetting"
             db.session.commit()
-            return {"message": f"Action '{action}' set for email", "status_code": 200}
-        return {"message": "No action needed for the email", "status_code": 200}
+            return "targetSetting"
+        return None
     except Exception as e:
         logger.error(f"Error checking email action: {str(e)}", exc_info=True)
-        return {"error": f"Error checking email action: {str(e)}", "status_code": 500}
+        return None

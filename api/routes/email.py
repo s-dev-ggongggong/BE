@@ -18,8 +18,11 @@ def handle_api_error(error):
 
 @email_bp.route('/', methods=['GET'])
 def get_emails():
-    response = email_service.get_emails()
+    search = request.args.get('search')
+    employee_id = request.args.get('employee_id', type=int)
+    response = email_service.get_emails(search=search, employee_id=employee_id)
     return jsonify(response), response['status_code']
+
     
 
 @email_bp.route('/<int:email_id>', methods=['GET'])
@@ -48,23 +51,20 @@ def delete_email(email_id):
     response = email_service.delete_email(email_id)
     return jsonify(response), response['status_code']
 
-@email_bp.route('/phishing/log', methods=['POST'])
-def generate_phishing_logs():
+@email_bp.route('/ph/create', methods=['POST'])
+def generate_phishing_emails():
     data = request.get_json()
-    response = email_service.generate_phishing_logs(data)
+    if not data or 'training_id' not in data:
+        return jsonify({"error": "Training ID is required"}), 400
+    
+    response = email_service.generate_phishing_logs(data['training_id'])
     return jsonify(response), response['status_code']
 
 
-
-@email_bp.route('/phishing/<int:training_id>', methods=['POST'])
+@email_bp.route('/ph/send/<int:training_id>', methods=['POST'])
 def send_emails(training_id):
     employee_list = request.json.get('employees', [])
     if not employee_list:
         return jsonify({"error": "Employee list is missing."}), 400
     response = email_service.send_phishing_emails(training_id, employee_list)
-    return jsonify(response), response['status_code']
-
-@email_bp.route('/action/<int:email_id>', methods=['GET'])
-def check_email_action(email_id):
-    response = email_service.check_and_set_action_for_email(email_id)
     return jsonify(response), response['status_code']

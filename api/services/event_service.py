@@ -1,3 +1,4 @@
+#api/services/event_serivce.py
 from extensions import db
 from sqlalchemy.exc import SQLAlchemyError
 from models.event_log import EventLog

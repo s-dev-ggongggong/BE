@@ -1,5 +1,7 @@
 # File: api/services/employee_service.py
 
+from marshmallow import ValidationError
+from models.department import Department
 from models.employee import Employee
 from extensions import db
 from sqlalchemy.exc import SQLAlchemyError
@@ -9,42 +11,74 @@ from flask_jwt_extended import create_access_token
  
 from utils.string_utils import convert_dict_keys_to_snake_case
 
-def get_all_users():
+# services/employee_service.py
+def get_employees_by_filters(role_name=None, department_filters=None):
+  query = Employee.query
+  if role_name:
+        query = query.filter(Employee.role_name == role_name)
+  if department_filters:
+    query = query.join(Employee.department).filter(*department_filters)
+  employees = query.all()
+
+
+def get_users(department_id=None, role_id=None, employee_id=None, search=None):
     try:
-        users = Employee.query.all()
+        query = Employee.query
+
+        if employee_id:
+            query = query.filter_by(id=employee_id)
+        if department_id:
+            query = query.filter_by(department_id=department_id)
+        if role_id:
+            query = query.filter_by(role_id=role_id)
+        if search:
+            query = query.filter(Employee.name.ilike(f'%{search}%'))
+
+        employees = query.all()
+
+        if not employees:
+            return {"message": "직원을 찾을 수 없습니다."}, 404
+
         result = [
-            {"id": user.id, "name": user.name, "email": user.email, "department_name": user.department_name, "role_name": user.role_name}
-            for user in users
+            {
+                "id": emp.id,
+                "name": emp.name,
+                "email": emp.email,
+                "department_name": emp.department_name,
+                "role_name": emp.role_name
+            }
+            for emp in employees
         ]
+
         return result, 200
-    except SQLAlchemyError as e:
-        return {"error": str(e)}, 500
+    except Exception as e:
+        return {"error": f"사용자 조회 중 오류 발생: {str(e)}"}, 500
 
-def get_user_by_id(user_id):
-    try:
-        user = Employee.query.get_or_404(user_id)
-        return {
-            "id": user.id, "name": user.name, "email": user.email, "department_name": user.department_name, "role_name": user.role_name
-        }, 200
-    except SQLAlchemyError as e:
-        return {"error": str(e)}, 500
 
+    
 def create_user(data):
     try:
-        new_user = Employee(
-            name=data['name'],
-            email=data['email'],
-            password=data['password'],  # Consider hashing this
-            department_name=data['department_name'],
-            role_name=data['role_name']
-        )
+        # 데이터 검증 및 역직렬화
+        user_data = employee_schema.load(data)
+        
+        # 이메일 중복 체크
+        existing_user = Employee.query.filter_by(email=user_data['email']).first()
+        if existing_user:
+            return {"error": "Email already exists."}, 400
+
+        # 고정 비밀번호 설정
+        user_data['password'] = 'igloo1234'
+
+        new_user = Employee(**user_data)
         db.session.add(new_user)
         db.session.commit()
         return {"message": "Employee created", "user": {"id": new_user.id, "name": new_user.name}}, 201
+    except ValidationError as err:
+        return {"error": err.messages}, 400
     except SQLAlchemyError as e:
         db.session.rollback()
         return {"error": str(e)}, 500
-
+    
 def get_users_with_trainings():
     try:
         users = Employee.query.all()
@@ -61,6 +95,8 @@ def get_users_with_trainings():
     except SQLAlchemyError as e:
         return {"error": str(e)}, 500
     
+
+ 
 
 def create_employee(data):
     try:
