@@ -6,27 +6,27 @@
     "version": "1.0.0"
   },
   "paths": {
-    "/user": {
+    "/employee": {
       "post": {
-        "tags": ["User"],
-        "summary": "Create a new user",
+        "tags": ["Employee"],
+        "summary": "Create a new employee",
         "requestBody": {
           "required": true,
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/User"
+                "$ref": "#/components/schemas/Employee"
               }
             }
           }
         },
         "responses": {
           "200": {
-            "description": "User created successfully",
+            "description": "Employee created successfully",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/User"
+                  "$ref": "#/components/schemas/Employee"
                 }
               }
             }
@@ -34,8 +34,8 @@
         }
       },
       "get": {
-        "summary": "Get all users",
-        "tags": ["User"],
+        "summary": "Get all employees",
+        "tags": ["Employee"],
         "responses": {
           "200": {
             "description": "Successful response",
@@ -44,7 +44,7 @@
                 "schema": {
                   "type": "array",
                   "items": {
-                    "$ref": "#/components/schemas/User"
+                    "$ref": "#/components/schemas/Employee"
                   }
                 }
               }
@@ -53,10 +53,10 @@
         }
       }
     },
-    "/user/{id}": {
+    "/employee/{id}": {
       "get": {
-        "tags": ["User"],
-        "summary": "Get a user by Id",
+        "tags": ["Employee"],
+        "summary": "Get a employee by Id",
         "parameters": [
           {
             "name": "id",
@@ -73,7 +73,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/User"
+                  "$ref": "#/components/schemas/Employee"
                 }
               }
             }
@@ -81,8 +81,8 @@
         }
       },
       "put": {
-        "tags": ["User"],
-        "summary": "Update a user",
+        "tags": ["Employee"],
+        "summary": "Update a employee",
         "parameters": [
           {
             "name": "id",
@@ -98,18 +98,18 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/User"
+                "$ref": "#/components/schemas/Employee"
               }
             }
           }
         },
         "responses": {
           "200": {
-            "description": "User updated successfully",
+            "description": "Employee updated successfully",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/User"
+                  "$ref": "#/components/schemas/Employee"
                 }
               }
             }
@@ -117,8 +117,8 @@
         }
       },
       "delete": {
-        "tags": ["User"],
-        "summary": "Delete a user",
+        "tags": ["Employee"],
+        "summary": "Delete a employee",
         "parameters": [
           {
             "name": "id",
@@ -131,11 +131,11 @@
         ],
         "responses": {
           "200": {
-            "description": "User deleted successfully",
+            "description": "Employee deleted successfully",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/User"
+                  "$ref": "#/components/schemas/Employee"
                 }
               }
             }
@@ -143,7 +143,45 @@
         }
       }
     },
-    "/training/create": {
+    "/employee/admin": {
+      "post": {
+        "tags": ["Employee"],
+        "summary": "Login with admin credentials",
+        "requestBody": {
+          "description": "Admin credentials",
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Admin"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful JWT response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "access_token": {
+                      "type": "string",
+                      "example": "JWT token"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Invalid credentials"
+          }
+        }
+      }
+    },
+    "/training": {
       "post": {
         "summary": "Create a new training",
         "tags": ["Training"],
@@ -189,9 +227,7 @@
             }
           }
         }
-      }
-    },
-    "/training/read": {
+      },
       "get": {
         "summary": "Get all training",
         "tags": ["Training"],
@@ -222,16 +258,70 @@
         }
       }
     },
-    "/training/update": {
-      "put": {
-        "summary": "Update an existing training",
+    "/training/{id}": {
+      "get": {
         "tags": ["Training"],
+        "summary": "Get a specific training by ID",
+        "operationId": "getTrainingById",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "Training ID",
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Training details",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Training"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Training not found"
+          }
+        }
+      },
+      "put": {
+        "tags": ["Training"],
+        "summary": "Update an existing training",
+        "operationId": "updateTraining",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "Training ID",
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
         "requestBody": {
+          "description": "Training data to update",
           "required": true,
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/TrainingUpdate"
+                "$ref": "#/components/schemas/Training"
               }
             }
           }
@@ -278,17 +368,22 @@
             }
           }
         }
-      }
-    },
-    "/training/drop": {
+      },
       "delete": {
-        "summary": "Delete a training",
         "tags": ["Training"],
+        "summary": "Delete a specific training",
+        "operationId": "deleteTraining",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
         "parameters": [
           {
             "name": "id",
             "in": "path",
             "required": true,
+            "description": "Training ID",
             "schema": {
               "type": "integer"
             }
@@ -296,11 +391,483 @@
         ],
         "responses": {
           "200": {
-            "description": "Training deleted successfully",
+            "description": "Training deleted"
+          },
+          "404": {
+            "description": "Training not found"
+          }
+        }
+      }
+    },
+    "/email": {
+      "get": {
+        "tags": ["Email"],
+        "summary": "Get all emails",
+        "operationId": "getEmails",
+        "responses": {
+          "200": {
+            "description": "List of emails",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/Training"
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Email"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "summary": "Create a new email",
+        "operationId": "createEmail",
+        "requestBody": {
+          "description": "Email data",
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Email"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Email created"
+          },
+          "400": {
+            "description": "Invalid input"
+          }
+        }
+      }
+    },
+    "/email/{email_id}": {
+      "get": {
+        "tags": ["Email"],
+        "summary": "Get an email by ID",
+        "operationId": "getEmailById",
+        "parameters": [
+          {
+            "name": "email_id",
+            "in": "path",
+            "required": true,
+            "description": "Email ID",
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Email fetched successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Email"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Email not found"
+          }
+        }
+      },
+      "put": {
+        "tags": ["Email"],
+        "summary": "Update an existing email",
+        "operationId": "updateEmail",
+        "parameters": [
+          {
+            "name": "email_id",
+            "in": "path",
+            "required": true,
+            "description": "Email ID",
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "description": "Updated email data",
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Email"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Email updated successfully"
+          },
+          "400": {
+            "description": "Invalid input"
+          },
+          "404": {
+            "description": "Email not found"
+          }
+        }
+      },
+      "delete": {
+        "tags": ["Email"],
+        "summary": "Delete an email by ID",
+        "operationId": "deleteEmail",
+        "parameters": [
+          {
+            "name": "email_id",
+            "in": "path",
+            "required": true,
+            "description": "Email ID",
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Email deleted successfully"
+          },
+          "404": {
+            "description": "Email not found"
+          }
+        }
+      }
+    },
+    "/email/ph/create": {
+      "tags": ["Email"],
+      "post": {
+        "summary": "Generate phishing email logs",
+        "operationId": "generatePhishingLogs",
+        "requestBody": {
+          "description": "Phishing log data",
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PhishingLog"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Phishing logs generated"
+          },
+          "400": {
+            "description": "Invalid input"
+          }
+        }
+      }
+    },
+    "/email/ph/send/{training_id}": {
+      "tags": ["Email"],
+      "post": {
+        "summary": "Send phishing emails for a training",
+        "operationId": "sendPhishingEmails",
+        "parameters": [
+          {
+            "name": "training_id",
+            "in": "path",
+            "required": true,
+            "description": "Training ID",
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "description": "Employee list for phishing emails",
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "employees": {
+                    "type": "array",
+                    "items": {
+                      "type": "integer"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Phishing emails sent"
+          },
+          "400": {
+            "description": "Employee list is missing"
+          }
+        }
+      }
+    },
+    "/eventlog": {
+      "get": {
+        "tags": ["EventLog"],
+        "summary": "Get all event logs",
+        "operationId": "getAllEventLogs",
+        "responses": {
+          "200": {
+            "description": "List of event logs",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/EventLog"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": ["EventLog"],
+        "summary": "Create a new event log",
+        "operationId": "createEventLog",
+        "requestBody": {
+          "description": "Event log data",
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EventLog"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Event log created successfully"
+          },
+          "400": {
+            "description": "Invalid input"
+          }
+        }
+      }
+    },
+    "/eventlog/{id}": {
+      "get": {
+        "tags": ["EventLog"],
+        "summary": "Get event log by ID",
+        "operationId": "getEventLogById",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "Event log ID",
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Event log retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EventLog"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Event log not found"
+          }
+        }
+      },
+      "put": {
+        "tags": ["EventLog"],
+        "summary": "Update an existing event log",
+        "operationId": "updateEventLog",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "Event log ID",
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "description": "Updated event log data",
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EventLog"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Event log updated successfully"
+          },
+          "400": {
+            "description": "Invalid input"
+          },
+          "404": {
+            "description": "Event log not found"
+          }
+        }
+      },
+      "delete": {
+        "tags": ["EventLog"],
+        "summary": "Delete an event log by ID",
+        "operationId": "deleteEventLog",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "Event log ID",
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Event log deleted successfully"
+          },
+          "404": {
+            "description": "Event log not found"
+          }
+        }
+      }
+    },
+    "/department": {
+      "get": {
+        "tags": ["Department"],
+        "summary": "Get all departments",
+        "operationId": "getAllDepartments",
+        "responses": {
+          "200": {
+            "description": "List of departments",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Department"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": ["Department"],
+        "summary": "Create a new department",
+        "operationId": "createDepartment",
+        "requestBody": {
+          "description": "Department data",
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Department"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Department created"
+          },
+          "400": {
+            "description": "Invalid input"
+          }
+        }
+      }
+    },
+    "/department/{id}": {
+      "get": {
+        "tags": ["Department"],
+        "summary": "Get department by ID",
+        "operationId": "getDepartmentById",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "Department ID",
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Department fetched successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Department"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Department not found"
+          }
+        }
+      },
+      "delete": {
+        "tags": ["Department"],
+        "summary": "Delete a department by ID",
+        "operationId": "deleteDepartment",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "Department ID",
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Department deleted successfully"
+          },
+          "404": {
+            "description": "Department not found"
+          }
+        }
+      }
+    },
+  "/role": {
+    "get": {
+      "tags": ["Role"],
+      "summary": "Get all roles",
+      "operationId": "getAllRoles",
+      "responses": {
+        "200": {
+          "description": "List of roles",
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/Role"
                 }
               }
             }
@@ -308,105 +875,500 @@
         }
       }
     },
-    "/users": {
-      "get": {
-        "tags": ["User"],
-        "summary": "Returns a list of users",
-        "responses": {
-          "200": {
-            "description": "Successful response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/components/schemas/User"
-                  }
-                }
+    "post": {
+      "tags": ["Role"],
+      "summary": "Create a new role",
+      "operationId": "createRole",
+      "requestBody": {
+        "description": "Role data",
+        "required": true,
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Role"
+            }
+          }
+        }
+      },
+      "responses": {
+        "201": {
+          "description": "Role created successfully"
+        },
+        "400": {
+          "description": "Invalid input"
+        }
+      }
+    }
+  },
+  "/role/{id}": {
+    "get": {
+      "summary": "Get role by ID",
+      "operationId": "getRoleById",
+      "parameters": [
+        {
+          "name": "id",
+          "in": "path",
+          "required": true,
+          "description": "Role ID",
+          "schema": {
+            "type": "integer"
+          }
+        }
+      ],
+      "responses": {
+        "200": {
+          "description": "Role retrieved successfully",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Role"
               }
             }
           }
+        },
+        "404": {
+          "description": "Role not found"
+        }
+      }
+    },
+    "put": {
+      "summary": "Update an existing role",
+      "operationId": "updateRole",
+      "parameters": [
+        {
+          "name": "id",
+          "in": "path",
+          "required": true,
+          "description": "Role ID",
+          "schema": {
+            "type": "integer"
+          }
+        }
+      ],
+      "requestBody": {
+        "description": "Updated role data",
+        "required": true,
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Role"
+            }
+          }
+        }
+      },
+      "responses": {
+        "200": {
+          "description": "Role updated successfully"
+        },
+        "400": {
+          "description": "Invalid input"
+        },
+        "404": {
+          "description": "Role not found"
+        }
+      }
+    },
+    "delete": {
+      "summary": "Delete a role by ID",
+      "operationId": "deleteRole",
+      "parameters": [
+        {
+          "name": "id",
+          "in": "path",
+          "required": true,
+          "description": "Role ID",
+          "schema": {
+            "type": "integer"
+          }
+        }
+      ],
+      "responses": {
+        "200": {
+          "description": "Role deleted successfully"
+        },
+        "404": {
+          "description": "Role not found"
         }
       }
     }
   },
   "components": {
     "schemas": {
-      "User": {
-        "type": "object",
-        "properties": {
-          "id": { "type": "integer" },
-          "name": { "type": "string" },
-          "email": { "type": "string" }
-        }
-      },
       "Training": {
         "type": "object",
-        "required": [
-          "trainingName",
-          "trainingStart",
-          "trainingEnd",
-          "resourceUser"
-        ],
         "properties": {
           "id": {
             "type": "integer",
-            "readOnly": true,
-            "description": "The auto-generated id of the training"
+            "example": 1,
+            "description": "Training unique identifier"
           },
-          "trainingName": { "type": "string", "description": "Name" },
-          "trainingDesc": { "type": "string", "description": "Description" },
-          "trainingStart": {
+          "training_name": {
+            "type": "string",
+            "example": "Phishing Awareness Training",
+            "description": "Training name"
+          },
+          "training_desc": {
+            "type": "string",
+            "example": "Training program focused on phishing awareness.",
+            "description": "Training description"
+          },
+          "training_start": {
             "type": "string",
             "format": "date",
-            "description": "Start date of training (YYYY-MM-DD)"
+            "example": "2023-10-01",
+            "description": "Training start date"
           },
-          "trainingEnd": {
+          "training_end": {
             "type": "string",
             "format": "date",
-            "description": "End date of training (YYYY-MM-DD)"
+            "example": "2023-10-31",
+            "description": "Training end date"
           },
-          "resourceUser": {
+          "resource_user": {
             "type": "integer",
-            "description": "choose random resource users from data"
+            "example": 123,
+            "description": "Employee managing the training"
           },
-          "maxPhishingMail": {
+          "max_phishing_mail": {
             "type": "integer",
-            "description": "Maximum number of phishing emails"
+            "example": 50,
+            "description": "Max phishing emails for training"
+          },
+          "dept_target": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Target departments list"
+          },
+          "role_target": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Target roles list"
+          },
+          "status": {
+            "type": "string",
+            "example": "RUN",
+            "description": "Training status",
+            "enum": ["PLAN", "RUN", "FIN"]
           }
-        }
+        },
+        "required": [
+          "training_name",
+          "training_desc",
+          "training_start",
+          "training_end",
+          "resource_user",
+          "max_phishing_mail",
+          "dept_target",
+          "role_target"
+        ]
       },
-      "TrainingUpdate": {
+      "Admin": {
         "type": "object",
         "properties": {
-          "trainingName": { "type": "string", "description": "Name" },
-          "trainingDesc": { "type": "string", "description": "Description" },
-          "trainingStart": {
+          "admin_id": {
             "type": "string",
-            "format": "date",
-            "description": "Start date of training (YYYY-MM-DD)"
+            "example": "admin123",
+            "description": "Admin identifier"
           },
-          "trainingEnd": {
+          "admin_pw": {
             "type": "string",
-            "format": "date",
-            "description": "End date of training (YYYY-MM-DD)"
-          },
-          "resourceUser": {
-            "type": "integer",
-            "description": "choose random resource users from data"
-          },
-          "maxPhishingMail": {
-            "type": "integer",
-            "description": "Maximum number of phishing emails"
+            "example": "password123",
+            "description": "Admin password"
           }
-        }
+        },
+        "required": ["admin_id", "admin_pw"]
       },
-      "Error": {
+      "CompleteTraining": {
         "type": "object",
         "properties": {
+          "id": {
+            "type": "integer",
+            "description": "Deleted training unique identifier"
+          },
+          "original_id": {
+            "type": "integer",
+            "description": "ID of the original training"
+          },
+          "training_desc": {
+            "type": "string",
+            "description": "Description of the training"
+          },
+          "training_start": {
+            "type": "string",
+            "format": "date",
+            "description": "Start date of the training"
+          },
+          "training_end": {
+            "type": "string",
+            "format": "date",
+            "description": "End date of the training"
+          },
+          "resource_user": {
+            "type": "integer",
+            "description": "ID of the resource employee who created the training"
+          },
+          "max_phishing_mail": {
+            "type": "integer",
+            "description": "Maximum number of phishing emails sent during the training"
+          },
+          "dept_target": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "List of targeted departments"
+          },
+          "role_target": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "List of targeted roles"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Creation date of the deleted training record"
+          },
+          "is_finished": {
+            "type": "boolean",
+            "description": "Indicates whether the training is finished"
+          },
+          "status": {
+            "type": "string",
+            "description": "Status of the deleted training (optional)"
+          },
+          "deleted_at": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Date and time when the training was deleted"
+          }
+        },
+        "required": [
+          "training_desc",
+          "training_start",
+          "training_end",
+          "resource_user",
+          "max_phishing_mail",
+          "dept_target",
+          "role_target"
+        ]
+      },
+      "Department": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer",
+            "example": 1,
+            "description": "Department unique identifier"
+          },
+          "name": {
+            "type": "string",
+            "example": "Human Resources",
+            "description": "Name of the department"
+          },
+          "code1": {
+            "type": "string",
+            "example": "HR01",
+            "description": "Department code 1"
+          },
+          "code2": {
+            "type": "string",
+            "example": "HR-General",
+            "description": "Department code 2"
+          },
+          "korean_name": {
+            "type": "string",
+            "example": "인사부",
+            "description": "Department name in Korean"
+          },
+          "dept_target": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Target departments list"
+          }
+        },
+        "required": ["name", "code1", "code2", "korean_name"]
+      },
+      "Employee": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer",
+            "example": 1,
+            "description": "Employee unique identifier"
+          },
+          "name": {
+            "type": "string",
+            "example": "ADMIN",
+            "description": "Name of the employee"
+          },
+          "email": {
+            "type": "string",
+            "example": "test1@example.com",
+            "description": "Employee's email address"
+          },
+          "password": {
+            "type": "string",
+            "example": "igloo1234",
+            "description": " password of the employee"
+          },
+          "role_name": {
+            "type": "string",
+            "example": "Manager",
+            "description": "Role assigned to the employee"
+          },
+          "department_name": {
+            "type": "string",
+            "example": "Human Resources",
+            "description": "Department of the employee"
+          },
+          "admin_id": {
+            "type": "string",
+            "example": "admin123",
+            "description": "Admin identifier"
+          },
+          "admin_pw": {
+            "type": "string",
+            "example": "password123",
+            "description": "Admin password"
+          }
+        },
+        "required": [
+          "name",
+          "email",
+          "password",
+          "role_name",
+          "department_name"
+        ]
+      },
+      "Email": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer",
+            "example": 1,
+            "description": "Email unique identifier"
+          },
+          "subject": {
+            "type": "string",
+            "example": "Your Weekly Update",
+            "description": "Email subject"
+          },
+          "body": {
+            "type": "string",
+            "example": "This is the body of the email.",
+            "description": "Email content"
+          },
+          "sender": {
+            "type": "string",
+            "example": "no-reply@example.com",
+            "description": "Email sender"
+          },
+          "recipient": {
+            "type": "string",
+            "example": "user@example.com",
+            "description": "Email recipient"
+          },
+          "sent_date": {
+            "type": "string",
+            "format": "date-time",
+            "example": "2023-09-12T08:00:00Z",
+            "description": "Email sent date"
+          },
+          "is_phishing": {
+            "type": "boolean",
+            "example": false,
+            "description": "Flag indicating if the email is phishing"
+          },
+          "employee_id": {
+            "type": "integer",
+            "example": 123,
+            "description": "Associated employee ID"
+          },
+          "training_id": {
+            "type": "integer",
+            "example": 1,
+            "description": "Associated training ID"
+          }
+        },
+        "required": ["subject", "body", "sender", "recipient"]
+      },
+      "EventLog": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer",
+            "example": 1,
+            "description": "Event Log unique identifier"
+          },
+          "timestamp": {
+            "type": "string",
+            "format": "date-time",
+            "example": "2023-09-12T08:00:00Z",
+            "description": "Event timestamp"
+          },
           "message": {
-            "type": "string"
+            "type": "string",
+            "example": "Log entry message",
+            "description": "Event message content"
+          },
+          "trainingId": {
+            "type": "integer",
+            "example": 123,
+            "description": "Training ID associated with this event"
+          },
+          "action": {
+            "type": "string",
+            "example": "targetSetting",
+            "description": "Action taken during the event"
           }
+        },
+        "required": ["timestamp", "message", "trainingId"]
+      },
+      "Role": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer",
+            "example": 1,
+            "description": "Role unique identifier"
+          },
+          "name": {
+            "type": "string",
+            "example": "Admin",
+            "description": "Role name"
+          },
+          "permissions": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "example": ["read", "write"],
+            "description": "Role permissions"
+          }
+        },
+        "required": ["name", "permissions"]
+      }
+    },
+    "securitySchemes": {
+      "bearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT"
+      }
+    },
+    "Error": {
+      "type": "object",
+      "properties": {
+        "message": {
+          "type": "string"
         }
       }
     }
