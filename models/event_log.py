@@ -3,7 +3,7 @@ from datetime import datetime
 import json
 from models.base_model import BaseModel
 from models.serializable_mixin import SerializableMixin
-from sqlalchemy.exc import IntegrityError
+
 class EventLog(BaseModel, SerializableMixin):
     __tablename__ = 'event_logs'
     
@@ -11,13 +11,12 @@ class EventLog(BaseModel, SerializableMixin):
     action = db.Column(db.String(50), nullable=False)
     timestamp = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
     training_id = db.Column(db.Integer)
-    message = db.Column(db.String(255)) 
-    # 관련 엔티티의 ID를 저장. 필요에 따라 Null 허용
+    message = db.Column(db.String(255))
     department_id = db.Column(db.Integer)
     employee_id = db.Column(db.Integer)
     email_id = db.Column(db.Integer)
     role_id = db.Column(db.Integer)
-    
+
     # 추가 데이터를 JSON 형태로 저장
     data = db.Column(db.Text)
 
@@ -26,7 +25,7 @@ class EventLog(BaseModel, SerializableMixin):
 
     def get_data(self):
         return json.loads(self.data) if self.data else {}
-     
+
     def to_dict(self):
         result = super().to_dict()
         result['data'] = self.get_data()

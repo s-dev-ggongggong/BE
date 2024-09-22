@@ -12,6 +12,7 @@ from api.routes.department import  department_bp
 from api.routes.role import  role_bp
 from api.routes.event_log import  event_log_bp
 from api.routes.login import login_bp  # 로그인 블루프린트 가져오기
+from api.routes.phishing import phishing_bp
  
 
 
@@ -24,7 +25,8 @@ def init_routes():
         (department_bp, '/department'),
         (role_bp, '/role'),
         (event_log_bp, '/eventlog'),
-        (login_bp, '/login')
+        (login_bp, '/login'),
+        (phishing_bp, '/')
 
     ]
 

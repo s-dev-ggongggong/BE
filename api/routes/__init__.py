@@ -7,5 +7,5 @@ from . import department
 from . import role
 from . import event_log
 from . import login
-
+from . import phishing
  

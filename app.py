@@ -6,6 +6,7 @@ from extensions import db, ma, migrate, jwt  # 중복 제거
 from config import Config
 from api import init_routes, api_bp
 from api.routes.login import login_bp
+from api.routes.phishing import phishing_bp 
 import os  # 중복 제거
 
 def setup_swagger(app, config):
@@ -34,6 +35,7 @@ def create_app(config_class=Config):
     # Register API blueprint
     app.register_blueprint(api_bp)
     app.register_blueprint(login_bp, url_prefix='/')  # login_bp를 최상위 경로에 등록
+    app.register_blueprint(phishing_bp, url_prefix='/')
 
     setup_swagger(app, config_class)
 
