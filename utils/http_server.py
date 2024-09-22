@@ -2,7 +2,7 @@ import sys
 import os
 import base64
 import json
-from datetime import datetime
+from datetime import datetime, timedelta
 from urllib.parse import urlparse, parse_qs
 from http.server import BaseHTTPRequestHandler, HTTPServer  # http.server 모듈을 임포트
 
@@ -50,13 +50,14 @@ class RequestHandler(BaseHTTPRequestHandler):
         else:
             self.send_response(404)
             self.end_headers()
+    
 
     # 유저 클릭 이벤트를 event_logs 테이블에 기록하는 함수
     def log_event(self, user_data):
         try:
             new_event = EventLog(
                 action='clicked_link',
-                timestamp=datetime.utcnow(),
+                timestamp=datetime.utcnow() + timedelta(hours=9),  # 한국 시간으로 변경
                 employee_id=user_data['id'],
                 department_id=user_data['department_name'],  # department_name을 department_id로 가정
                 message=f"User {user_data['name']} clicked phishing link"

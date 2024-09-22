@@ -3,7 +3,7 @@ import json
 from models.employee import Employee
 from models.event_log import EventLog
 from utils.http_status_handler import not_found
-from datetime import datetime
+from datetime import datetime,timedelta
 
 # 피싱 링크 생성 서비스
 def generate_phishing_link(user_id, db_session, training_id):
@@ -23,15 +23,20 @@ def generate_phishing_link(user_id, db_session, training_id):
         encoded_user_data = base64.urlsafe_b64encode(json.dumps(user_data).encode()).decode()
 
         # 인코딩된 유저 데이터 출력
+        
         print(f"Encoded user data: {encoded_user_data}")
 
-        # 피싱 링크 생성
-        phishing_link = f"http://127.0.0.1:7777/click?user={encoded_user_data}"
+         # 피싱 링크 생성
+        server_url = "http://127.0.0.1:7777"
+        phishing_link = f"{server_url}/click?user={encoded_user_data}"
+
+        # 한국 시간으로 변경
+        timestamp_kst = datetime.utcnow() + timedelta(hours=9)
 
         # 이벤트 로그 기록
         event_log = EventLog(
-            action='generate_phishing_link',
-            timestamp=datetime.utcnow(),
+            action='phishing_link_click',
+            timestamp=timestamp_kst,
             training_id=training_id,
             message=f"Phishing link generated for user {user.name}",
             employee_id=user.id,
