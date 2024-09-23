@@ -11,7 +11,6 @@ class EventLog(BaseModel, SerializableMixin):
     action = db.Column(db.String(50), nullable=False)
     timestamp = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
     training_id = db.Column(db.Integer)
-    message = db.Column(db.String(255))
     department_id = db.Column(db.Integer)
     employee_id = db.Column(db.Integer)
     email_id = db.Column(db.Integer)

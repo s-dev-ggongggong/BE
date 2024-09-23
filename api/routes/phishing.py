@@ -1,5 +1,5 @@
 from flask import Blueprint, request, jsonify
-from api.services.phishing_service import generate_phishing_link
+from api.services.phishing_service import PhishingEvent
 from extensions import db
 
 # Blueprint 설정
@@ -17,9 +17,11 @@ def generate_phishing_link_route():
         if not user_id or not training_id:
             return jsonify({"error": "user_id and training_id are required"}), 400
         
-        # 서비스 호출
-        link, status = generate_phishing_link(user_id, db.session, training_id)
+        # PhishingEvent 클래스를 사용해 피싱 링크 생성
+        phishing_event = PhishingEvent(db.session)
+        link, status = phishing_event.generate_phishing_link(user_id, training_id)
+
         return jsonify({"phishing_link": link}), status
-    
+
     except Exception as e:
         return jsonify({"error": str(e)}), 500

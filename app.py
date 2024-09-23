@@ -2,12 +2,12 @@ from flask import Flask, send_from_directory
 from flask_swagger_ui import get_swaggerui_blueprint
 from flask_migrate import Migrate
 from flask_cors import CORS
-from extensions import db, ma, migrate, jwt  # 중복 제거
+from extensions import db, ma, migrate, jwt  
 from config import Config
 from api import init_routes, api_bp
 from api.routes.login import login_bp
 from api.routes.phishing import phishing_bp 
-import os  # 중복 제거
+import os  
 
 def setup_swagger(app, config):
     swaggerui_blueprint = get_swaggerui_blueprint(
