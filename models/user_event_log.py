@@ -11,7 +11,7 @@ class UserEventLog(BaseModel, SerializableMixin):
     user_id = db.Column(db.Integer, nullable=False)
     user_name = db.Column(db.String(255), nullable=False)
     department_name = db.Column(db.String(255), nullable=False)
-    phishing_link = db.Column(db.Text, nullable=True)
+    email_id = db.Column(db.String(255), nullable=False)  # email_id 추가
     event_type = db.Column(db.String(50), nullable=False)  # 'link_generated', 'link_clicked' 등 이벤트 유형
     timestamp = db.Column(db.DateTime, nullable=False, default=lambda: datetime.utcnow() + timedelta(hours=9))  # 한국 표준시(KST) 설정
     data = db.Column(db.Text, nullable=True)  # 추가 데이터를 JSON으로 저장

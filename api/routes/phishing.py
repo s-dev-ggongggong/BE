@@ -9,19 +9,22 @@ phishing_bp = Blueprint('phishing_bp', __name__)
 @phishing_bp.route('/generate_phishing_link', methods=['POST'])
 def generate_phishing_link_route():
     try:
-        # 요청에서 user_id와 training_id 추출
+        # 요청에서 user_id, training_id, email_id 추출
         data = request.get_json()
         user_id = data.get('user_id')
         training_id = data.get('training_id')
+        email_id = data.get('email_id')
 
-        if not user_id or not training_id:
-            return jsonify({"error": "user_id and training_id are required"}), 400
-        
+        if not user_id or not training_id or not email_id:
+            return jsonify({"error": "user_id, training_id, and email_id are required"}), 400
+
         # PhishingEvent 클래스를 사용해 피싱 링크 생성
         phishing_event = PhishingEvent(db.session)
-        link, status = phishing_event.generate_phishing_link(user_id, training_id)
+        link, status = phishing_event.generate_phishing_link(user_id, training_id, email_id)
 
         return jsonify({"phishing_link": link}), status
 
     except Exception as e:
         return jsonify({"error": str(e)}), 500
+
+
