@@ -8,3 +8,6 @@ flask_swagger_ui==4.11.1
 marshmallow==3.22.0
 python-dotenv==1.0.1
 SQLAlchemy==2.0.32
+flask_jwt_extended==4.6.0
+marshmallow-sqlalchemy
+gunicorn

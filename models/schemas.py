@@ -1,6 +1,8 @@
 from flask import json
 from marshmallow import fields, post_load, validates, ValidationError,validates_schema, pre_load, post_dump
+from sqlalchemy import or_
 from extensions import ma, db
+from marshmallow_sqlalchemy import SQLAlchemyAutoSchema
 from models.department import Department
 from models.role import Role
 from models.employee import Employee
@@ -19,7 +21,7 @@ class Base(ma.SQLAlchemyAutoSchema):
 # Define schemas with data_key for camelCaseem
 class DepartmentSchema(Base):
     id = fields.Int(data_key="id",dump_only=True)
-    name = fields.Str(data_key="name",dump_only=True)
+    name = fields.Str(data_key="name")
     code1 = fields.Str(data_key="code1")
     code2 = fields.Str(data_key="code2")
     korean_name = fields.Str(data_key="koreanName")
@@ -43,25 +45,40 @@ class DepartmentSchema(Base):
         model = Department
 
 class RoleSchema(Base):
-        id = fields.Int(data_key="id")
-        name = fields.Str(data_key="name")
+        id = fields.Int(data_key="id",dump_only=True)
+        name = fields.Str(data_key="name",dump_only=True)
         korean_name = fields.Str(data_key="koreanName")
         class Meta(Base.Meta):
             model = Role
 
 class EmployeeSchema(Base):
-    id = fields.Int(data_key="id", dump_only=True)
-    name = fields.Str(data_key="name")
-    email = fields.Str(data_key="email")
-    department_name = fields.Str(data_key="departmentName")
-    role_name = fields.Str(data_key="roleName")
-    admin_id = fields.Str(data_key="adminId", dump_only=True)
-    admin_pw = fields.Str(data_key="adminPw", required=True, load_only=True)
+    id = fields.Int(dump_only=True)
+    name = fields.Str(required=True)
+    email = fields.Email(required=True)
+    role_id = fields.Int(required=True)
+    department_id = fields.Int(required=True)
+    is_admin = fields.Boolean(dump_only=True)
+
+    role = fields.Nested(RoleSchema, only=('id', 'name'))
+    department = fields.Nested(DepartmentSchema, only=('id', 'name'))
 
     class Meta(Base.Meta):
         model = Employee
         exclude = ('password',)
+        
 
+    @validates('role_id')
+    def validate_role(self, value):
+        role = Role.query.get(value)
+        if not role:
+            raise ValidationError('Invalid role ID.')
+
+    @validates('department_id')
+    def validate_department(self, value):
+        department = Department.query.get(value)
+        if not department:
+            raise ValidationError('Invalid department ID.')
+        
 class TrainingSchema(Base):
     id = fields.Int(dump_only=True)
     training_name = fields.Str(data_key="trainingName")
@@ -205,6 +222,8 @@ class EmailSchema(Base):
     body = fields.Str(data_key="body")
     sender = fields.Str(data_key="from")
     recipient = fields.Str(data_key="to")
+    making_phishing = fields.Int(data_key='makingPhishing',dump_only=True)
+    department_id= fields.Int(data_key='departmentId', dump_only=True)
     sent_date = fields.DateTime(
         data_key="sentDate",
         format='iso',
@@ -222,12 +241,8 @@ class EmailSchema(Base):
         data_key='emails',
         dump_only=True
     )
-    department = fields.Nested(
-        'DepartmentSchema',
-        only=['name', 'code1', 'korean_name'],
-        data_key='department'
-    )
 
+ 
 
     class Meta(Base.Meta):
         model = Email

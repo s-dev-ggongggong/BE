@@ -11,7 +11,7 @@ from api.routes.training import  training_bp
 from api.routes.department import  department_bp
 from api.routes.role import  role_bp
 from api.routes.event_log import  event_log_bp
- 
+from api.routes.complete_training import complete_bp 
  
 # def index():
 #     return redirect('/swagger')
@@ -24,7 +24,8 @@ def init_routes():
         (training_bp, '/training'),
         (department_bp, '/department'),
         (role_bp, '/role'),
-        (event_log_bp, '/eventlog')
+        (event_log_bp, '/eventlog'),
+        (complete_bp, '/completeTraining')
  
     ]
 

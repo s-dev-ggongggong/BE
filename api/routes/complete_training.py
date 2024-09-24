@@ -13,7 +13,7 @@ complete_bp = Blueprint('complete_bp', __name__)
 def handle_api_error(error):
     return jsonify({"error": str(error)}), 500
 
-# Route: Get all trainings
+
 @complete_bp.route('/', methods=['GET']) 
 def get_all_trainings():
     try:
@@ -22,7 +22,6 @@ def get_all_trainings():
     except Exception as e:
         return server_error(f"Error fetching trainings: {str(e)}")
 
-# Route: Get training by ID
 @complete_bp.route('/<int:id>', methods=['GET'])
 def get_training(id):
     try:
@@ -32,18 +31,17 @@ def get_training(id):
         return jsonify({"data": response, "message": f"Training ID {id} fetched successfully"}), status
     except Exception as e:
         return jsonify({"error": f"Error fetching training: {str(e)}"}), 500
-# Route: Create new training
+
 
  
 # Route: Update a training
 @complete_bp.route('/<int:id>', methods=['PUT'])
 def update_training_route(id):
     try:
-        # Get the JSON data from the request
+
         data = request.get_json()
-        print(f"Received ID: {id}")  # Verify if ID is passed correctly
-        print(f"Received Data: {data}")  # Check the incoming data payload
-        # Call the update_training function with id and data
+        print(f"Received ID: {id}") 
+        print(f"Received Data: {data}")  
         response, status  = update_training_service(id, data)
         return jsonify({"message": f"Training ID {id} updated successfully", "data": response}), status
 

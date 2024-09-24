@@ -1,10 +1,7 @@
-# utils/api_error_handler.py
 from functools import wraps
 from flask import jsonify
 from marshmallow import ValidationError
 from utils.logger import setup_logger
-from models.schemas import TrainingSchema
-from models.schemas import training_schema, trainings_schema  # Make sure to import the schemas here
 
 logger = setup_logger(__name__)
 
@@ -26,6 +23,9 @@ def validate_agent_ip(ip_addr):
     pass
 
 def validate_training_data(data, many=False):
+    from models.schemas import TrainingSchema
+    from models.schemas import training_schema, trainings_schema  # Make sure to import the schemas here
+
     """Validates training data using Marshmallow schemas."""
     schema = TrainingSchema()
     try:

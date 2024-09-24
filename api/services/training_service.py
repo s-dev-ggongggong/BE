@@ -1,5 +1,4 @@
 import json
-
 from flask import jsonify
 from marshmallow import ValidationError
 from sqlalchemy import func, or_
@@ -51,30 +50,33 @@ def convert_date_string_to_datetime(date_string):
         logging.error(f"Date conversion error: {str(e)}")
         raise
 
-
 def create_event_log_for_training(training, session):
-    dept_targets = json.loads(training.dept_target)
-    role_targets = json.loads(training.role_target)
-    
-    employees = Employee.query.filter(
-        or_(Employee.department_id.in_(dept_targets),
-            Employee.role_id.in_(role_targets))
-    ).all()
-    
-    employee_ids = [emp.id for emp in employees]
-    email_ids = [email.id for emp in employees for email in emp.emails]
+    try:
+        dept_targets = json.loads(training.dept_target)
+        role_targets = json.loads(training.role_target)
+        
+        employees = Employee.query.filter(
+            or_(Employee.department_id.in_(dept_targets),
+                Employee.role_id.in_(role_targets))
+        ).all()
+        
+        employee_ids = [emp.id for emp in employees]
+        email_ids = [email.id for emp in employees for email in emp.emails]
 
-    event_log = EventLog(
-        action="targetSetting",
-        timestamp=training.training_start,
-        training_id=training.id,
-        department_id=json.dumps(dept_targets),
-        role_id=json.dumps(role_targets),
-        employee_id=json.dumps(employee_ids),
-        email_id=json.dumps(email_ids),
-        data="agent"
-    )
-    session.add(event_log)
+        event_log = EventLog(
+            action="targetSetting",
+            timestamp=training.training_start,
+            training_id=training.id,
+            department_id=json.dumps(dept_targets),
+            role_id=json.dumps(role_targets),
+            employee_id=json.dumps(employee_ids),
+            email_id=json.dumps(email_ids),
+            data="agent"
+        )
+        session.add(event_log)
+    except Exception as e:
+        logger.error(f"Error creating event log for training: {str(e)}")
+        raise
 
 def update_training_status(training, session):
     now = datetime.utcnow()
@@ -109,17 +111,11 @@ def create_training_service(data):
                 'training_desc': data.get('trainingDesc', '').strip(),
                 'training_start': convert_date_string_to_datetime(data.get('trainingStart')),
                 'training_end': convert_date_string_to_datetime(data.get('trainingEnd')),
-                'dept_target': json.dumps(data.get('deptTarget')),
-                'role_target': json.dumps(data.get('roleTarget')),
+                 'dept_target': json.dumps(data.get('deptTarget'), ensure_ascii=False),
+                 'role_target': json.dumps(data.get('roleTarget'), ensure_ascii=False),
                 'resource_user': data.get('resourceUser'),
                 'max_phishing_mail': data.get('maxPhishingMail')
             }
-            mapped_data['dept_target'] = json.dumps(mapped_data['dept_target'][0] if isinstance(mapped_data['dept_target'], list) else mapped_data['dept_target'])
-            mapped_data['role_target'] = json.dumps(mapped_data['role_target'][0] if isinstance(mapped_data['role_target'], list) else mapped_data['role_target'])
-
-
-            # Log the incoming request data for debugging
-            logger.info(f"Mapped data: {mapped_data}")
 
             # Validate that mandatory fields are provided and not empty
             for field in ['training_name', 'training_desc', 'training_start', 'training_end', 'resource_user']:
@@ -259,9 +255,12 @@ def update_training_service(id, data):
             # Check for existing records with the same values
             existing_query = Training.query.filter(Training.id != id)
             for key, value in updated_data.items():
+                if isinstance(value, list):
+                    value = ','.join(value)
                 existing_query = existing_query.filter(getattr(Training, key) == value)
             
             existing_training = existing_query.first()
+
             if existing_training:
                 return handle_response(409, message="Another training record with these details already exists.")
 
@@ -276,12 +275,12 @@ def update_training_service(id, data):
             return handle_response(200, message="Training updated successfully")
     
     except IntegrityError as e:
-        db.session.rollback()
+        session.rollback()
         logger.error(f"IntegrityError: {str(e)}")
         return handle_response(400, message="Database integrity error.")
 
     except Exception as e:
-        db.session.rollback()
+        session.rollback()
         logger.error(f"Exception occurred: {str(e)}")
         return server_error(f"An unexpected error occurred: {str(e)}")
 

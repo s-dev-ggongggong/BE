@@ -15,19 +15,23 @@ def handle_api_error(error):
 
 @employee_bp.route('/', methods=['GET'])
 def get_employees():
-    department_id = request.args.get('department_id', type=int)
+    department = request.args.get('department_name')
     role_id = request.args.get('role_id', type=int)
     employee_id = request.args.get('employee_id', type=int)
     search = request.args.get('search')
+    role_name = request.args.get('role_name')
 
     result, status_code = employee_service.get_users(
-        department_id=department_id,
+        department=department, 
         role_id=role_id,
         employee_id=employee_id,
-        search=search
+        search=search,
+        role_name=role_name
     )
-
     return jsonify(result), status_code
+
+
+
 @employee_bp.route('/employees', methods=['POST'])
 def create_employee():
     data = request.get_json()
@@ -36,14 +40,12 @@ def create_employee():
     response, status_code = employee_service.create_user(data)
     return jsonify(response), status_code
 
+
 @employee_bp.route('/with-training', methods=['GET'])
 def get_users_with_trainings():
     users, status = employee_service.get_users_with_trainings()
     return handle_response(status, data=users, message="Employees with trainings retrieved successfully")
 # employee.py
-
-
-
 
 @employee_bp.route('/admin', methods=['POST'])
 def admin_login_route():

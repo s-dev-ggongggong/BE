@@ -9,16 +9,15 @@ class Employee(BaseModel,SerializableMixin):
     email = db.Column(db.String(100), unique=True, nullable=False)
     password = db.Column(db.String(255), nullable=False)
     
-    role_name = db.Column(db.String(50), db.ForeignKey('roles.name'), nullable=False)
-    department_name = db.Column(db.String(100), db.ForeignKey('departments.name'), nullable=False)
-
-    admin_id = db.Column(db.String(50), nullable=True)
-    admin_pw = db.Column(db.String(50), nullable=True)
+    role_id = db.Column(db.String(50), db.ForeignKey('roles.id'), nullable=False)
+    department_id = db.Column(db.Integer, db.ForeignKey('departments.id'), nullable=False)
+    is_admin = db.Column(db.Boolean, default=False)
 
     role = db.relationship('Role', back_populates='employees')
     department = db.relationship('Department', back_populates='employees')
 
- 
+
+
 
 
     def __repr__(self):
@@ -27,8 +26,7 @@ class Employee(BaseModel,SerializableMixin):
     def to_dict(self):
         data = super().to_dict()
         data.update({
-            'admin_id': self.admin_id,
-            'admin_pw': self.admin_pw
+            'is_admin': self.is_admin
         })
         return data
     
@@ -36,4 +34,4 @@ class Employee(BaseModel,SerializableMixin):
     
     @staticmethod
     def required_fields():
-        return ['name', 'email', 'password', 'role_name', 'department_name']
+        return ['name', 'email', 'password', 'role_id', 'department_id']

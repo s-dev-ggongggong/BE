@@ -3,9 +3,14 @@ from extensions import db
 from models.base_model import BaseModel
 from datetime import datetime
 import json
- 
+from utils.http_status_handler import handle_response, server_error
+from sqlalchemy.exc import SQLAlchemyError, IntegrityError
+from sqlalchemy import or_
+import logging
 
- 
+logger = logging.getLogger(__name__)
+
+
 
 class EventLog(BaseModel):
     __tablename__ = 'event_logs'
@@ -24,7 +29,6 @@ class EventLog(BaseModel):
 
  
  
-    import json
 
     def to_dict(self):
         def safe_json_loads(value):

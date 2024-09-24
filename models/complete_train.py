@@ -62,12 +62,4 @@ class CompleteTraining(BaseModel):
             'emails': [email.to_dict() for email in self.emails]  # Assuming Email has a to_dict method
             }
     
-
-    @staticmethod
-    def parse_datetime(value):
-        if isinstance(value, str):
-            return datetime.fromisoformat(value.replace('Z', '+00:00')).strftime('%Y-%m-%d %H:%M:%S')
-        return value
-
-    def __repr__(self):
-        return f'<CompleteTraining {self.training_name}>'
+ 

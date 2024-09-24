@@ -69,26 +69,26 @@ def create_training():
         logging.error(f"Exception occurred: {str(e)}")
         return jsonify({"error": str(e)}), 500
 
-@training_bp.route('/all', methods=['POST'])
-def bulk_upload_trainings():
-    logger.info("Bulk upload training request received.")  # Log request start
-    try:
-        # Access the request JSON body
-        data = request.get_json()
-        if not isinstance(data, list):  # Ensure the incoming data is a list
-            return jsonify({"error": "Request body must be a list of training records."}), 400
+# @training_bp.route('/all', methods=['POST'])
+# def bulk_upload_trainings():
+#     logger.info("Bulk upload training request received.")  # Log request start
+#     try:
+#         # Access the request JSON body
+#         data = request.get_json()
+#         if not isinstance(data, list):  # Ensure the incoming data is a list
+#             return jsonify({"error": "Request body must be a list of training records."}), 400
 
-        # Call the service to handle bulk training creation
-        response_data, status_code = training_service.bulk_training(data)  # Fix double jsonify handling
+#         # Call the service to handle bulk training creation
+#         response_data, status_code = training_service.bulk_training(data)  # Fix double jsonify handling
 
-        logger.info(f"Bulk training operation completed with status {status_code}.")  # Log only status code (no response object)
+#         logger.info(f"Bulk training operation completed with status {status_code}.")  # Log only status code (no response object)
         
-        # Directly return `response_data` without wrapping it in `jsonify` again
-        return response_data, status_code
+#         # Directly return `response_data` without wrapping it in `jsonify` again
+#         return response_data, status_code
 
-    except Exception as e:
-        logger.error(f"Bulk upload error: {str(e)}")
-        return jsonify({"error": f"Bulk upload error: {str(e)}"}), 500
+#     except Exception as e:
+#         logger.error(f"Bulk upload error: {str(e)}")
+#         return jsonify({"error": f"Bulk upload error: {str(e)}"}), 500
     
 @training_bp.route('/status', methods=['POST'])
 def update_all_training_statuses():

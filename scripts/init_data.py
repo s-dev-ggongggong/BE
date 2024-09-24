@@ -41,6 +41,31 @@ def convert_keys_to_snake_case(data):
 def process_data(json_data):
     return {camel_to_snake(k): v for k, v in json_data.items()}
 
+def load_departments(data):
+    for item in data:
+        item = process_data(item)
+        existing = Department.query.filter_by(name=item['name']).first()
+        if existing:
+            for key, value in item.items():
+                setattr(existing, key, value)
+        else:
+            department = Department(**item)
+            db.session.add(department)
+    db.session.commit()
+
+def load_roles(data):
+    for item in data:
+        item = process_data(item)
+        existing = Role.query.filter_by(name=item['name']).first()
+        if existing:
+            for key, value in item.items():
+                setattr(existing, key, value)
+        else:
+            role = Role(**item)
+            db.session.add(role)
+    db.session.commit()
+
+
 def load_trainings(training_data):
     for item in training_data:
         try:
@@ -58,26 +83,36 @@ def load_trainings(training_data):
             print(f"An error occurred while adding training: {e}")
             db.session.rollback()   
 
+
+
 def load_employees(data):
+    departments = {d.korean_name: d.id for d in Department.query.all()}
+    roles = {r.korean_name: r.id for r in Role.query.all()}
+
     for item in data:
-        item = process_data(item)
-        employee = Employee(**item)
-        db.session.add(employee)
+        department_id = departments.get(item['department_name'])
+        role_id = roles.get(item['role_name'])
+
+        if department_id is None or role_id is None:
+            print(f"Warning: Department or Role not found for employee {item['name']}")
+            continue
+
+        try:
+            employee = Employee(
+                name=item['name'],
+                email=item['email'],
+                password=item['password'],  # Hash password for secure storage
+                department_id=department_id,
+                role_id=role_id,
+                is_admin=item['name'] == 'ADMIN'
+            )
+            db.session.add(employee)
+        except SQLAlchemyError as e:
+            print(f"Error adding employee {item['name']}: {e}")
+            db.session.rollback()
+
     db.session.commit()
 
-def load_departments(data):
-    for item in data:
-        item = process_data(item)
-        department = Department(**item)
-        db.session.add(department)
-    db.session.commit()
-
-def load_roles(data):
-    for item in data:
-        item = process_data(item)
-        role = Role(**item)
-        db.session.add(role)
-    db.session.commit()
 
 def load_emails(emails):
     for item in emails:
@@ -87,7 +122,9 @@ def load_emails(emails):
             'body': item['body'],
             'sender': item['from'],  # Changed from 'from' to 'sender'
             'recipient': item['to'],  # Changed from 'to' to 'recipient'
-            'sent_date': convert_date_string_to_datetime(item['date'])  # Changed from 'date' to 'sent_date'
+            'sent_date': convert_date_string_to_datetime(item['date']),  # Changed from 'date' to 'sent_date'
+            'making_phishing': 0  # 기본값 설정
+
         }
 
         email = Email(**email_data)
@@ -118,14 +155,9 @@ def load_event_logs(event_logs):
 def main():
     app = create_app()
     with app.app_context():
+        db.session.query(Employee).delete()
         db.session.query(Training).delete()  # Clear existing data if necessary
         db.session.commit()
-        
-        trainings = load_json('data/trainings.json')
-        load_trainings(trainings)
-
-        employees = load_json('data/employees.json')
-        load_employees(employees)
 
         departments = load_json('data/departments.json')
         load_departments(departments)
@@ -133,17 +165,28 @@ def main():
         roles = load_json('data/roles.json')
         load_roles(roles)
 
+       
+
+        employees = load_json('data/employees.json')
+        load_employees(employees)
+        print("Employee data successfully loaded.")
+
+        trainings = load_json('data/trainings.json')
+        load_trainings(trainings)
+       
         emails = load_json('data/emails.json')
         load_emails(emails)
 
-        print("Data successfully loaded.")
 
-        db.session.commit()
-        print("All trainings have been successfully added.")
         events = load_json('data/event_logs.json')
         load_event_logs(events)
 
-        print("All events have been successfully added.")
+        
+        print("Data successfully loaded.")
 
+ 
+        print("All trainings have been successfully added.")
+ 
+ 
 if __name__ == '__main__':
     main()

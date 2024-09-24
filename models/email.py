@@ -16,14 +16,14 @@ class Email(BaseModel, SerializableMixin):
     employee_id = db.Column(db.Integer, db.ForeignKey('employees.id'), nullable=True)
     employee = db.relationship('Employee', backref='emails', lazy=True)
 
+    making_phishing= db.Column(db.Integer, nullable=False, default=0)
     training_id = db.Column(db.Integer,db.ForeignKey('trainings.id'),nullable=True)
     completed_training_id = db.Column(db.Integer, db.ForeignKey('complete_trainings.id'), nullable=True)
 
-    department_name  = db.Column(db.String(100), db.ForeignKey('departments.name'), nullable=True)
-    department = db.relationship('Department', backref='emails', lazy=True,foreign_keys=[department_name])
+    department_id  = db.Column(db.String(100), db.ForeignKey('departments.id'), nullable=True)
 
-    def to_dict(self):
-        return {
+    def to_dict(self,include_internal=False):
+        email_dict= {
             'id': self.id,
             'subject': self.subject,
             'body': self.body,
@@ -35,7 +35,10 @@ class Email(BaseModel, SerializableMixin):
             'training_id' :self.training_id,
             'complete_training' : self.completed_training_id
         }
-    
+        if include_internal:
+                email_dict['making_phishing'] = self.making_phishing
+        return email_dict
+
     def __repr__(self):
         return f'<Email {self.subject}>'
     
@@ -48,4 +51,4 @@ class Email(BaseModel, SerializableMixin):
     def parse_datetime(value):
         if isinstance(value, str):
             return datetime.fromisoformat(value.replace('Z', '+00:00')).strftime('%Y-%m-%d %H:%M:%S')
-        return value
+        return value    

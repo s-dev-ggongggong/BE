@@ -854,70 +854,34 @@
         }
       }
     },
-  "/role": {
-    "get": {
-      "tags": ["Role"],
-      "summary": "Get all roles",
-      "operationId": "getAllRoles",
-      "responses": {
-        "200": {
-          "description": "List of roles",
-          "content": {
-            "application/json": {
-              "schema": {
-                "type": "array",
-                "items": {
-                  "$ref": "#/components/schemas/Role"
+    "/role": {
+      "get": {
+        "tags": ["Role"],
+        "summary": "Get all roles",
+        "operationId": "getAllRoles",
+        "responses": {
+          "200": {
+            "description": "List of roles",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Role"
+                  }
                 }
               }
             }
           }
         }
-      }
-    },
-    "post": {
-      "tags": ["Role"],
-      "summary": "Create a new role",
-      "operationId": "createRole",
-      "requestBody": {
-        "description": "Role data",
-        "required": true,
-        "content": {
-          "application/json": {
-            "schema": {
-              "$ref": "#/components/schemas/Role"
-            }
-          }
-        }
       },
-      "responses": {
-        "201": {
-          "description": "Role created successfully"
-        },
-        "400": {
-          "description": "Invalid input"
-        }
-      }
-    }
-  },
-  "/role/{id}": {
-    "get": {
-      "summary": "Get role by ID",
-      "operationId": "getRoleById",
-      "parameters": [
-        {
-          "name": "id",
-          "in": "path",
+      "post": {
+        "tags": ["Role"],
+        "summary": "Create a new role",
+        "operationId": "createRole",
+        "requestBody": {
+          "description": "Role data",
           "required": true,
-          "description": "Role ID",
-          "schema": {
-            "type": "integer"
-          }
-        }
-      ],
-      "responses": {
-        "200": {
-          "description": "Role retrieved successfully",
           "content": {
             "application/json": {
               "schema": {
@@ -926,449 +890,486 @@
             }
           }
         },
-        "404": {
-          "description": "Role not found"
+        "responses": {
+          "201": {
+            "description": "Role created successfully"
+          },
+          "400": {
+            "description": "Invalid input"
+          }
         }
       }
     },
-    "put": {
-      "summary": "Update an existing role",
-      "operationId": "updateRole",
-      "parameters": [
-        {
-          "name": "id",
-          "in": "path",
-          "required": true,
-          "description": "Role ID",
-          "schema": {
-            "type": "integer"
-          }
-        }
-      ],
-      "requestBody": {
-        "description": "Updated role data",
-        "required": true,
-        "content": {
-          "application/json": {
+    "/role/{id}": {
+      "get": {
+        "summary": "Get role by ID",
+        "operationId": "getRoleById",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "Role ID",
             "schema": {
-              "$ref": "#/components/schemas/Role"
+              "type": "integer"
             }
           }
+        ],
+        "responses": {
+          "200": {
+            "description": "Role retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Role"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Role not found"
+          }
         }
       },
-      "responses": {
-        "200": {
-          "description": "Role updated successfully"
-        },
-        "400": {
-          "description": "Invalid input"
-        },
-        "404": {
-          "description": "Role not found"
-        }
-      }
-    },
-    "delete": {
-      "summary": "Delete a role by ID",
-      "operationId": "deleteRole",
-      "parameters": [
-        {
-          "name": "id",
-          "in": "path",
+      "put": {
+        "summary": "Update an existing role",
+        "operationId": "updateRole",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "Role ID",
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "description": "Updated role data",
           "required": true,
-          "description": "Role ID",
-          "schema": {
-            "type": "integer"
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Role"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Role updated successfully"
+          },
+          "400": {
+            "description": "Invalid input"
+          },
+          "404": {
+            "description": "Role not found"
           }
         }
-      ],
-      "responses": {
-        "200": {
-          "description": "Role deleted successfully"
-        },
-        "404": {
-          "description": "Role not found"
+      },
+      "delete": {
+        "summary": "Delete a role by ID",
+        "operationId": "deleteRole",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "Role ID",
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Role deleted successfully"
+          },
+          "404": {
+            "description": "Role not found"
+          }
         }
       }
-    }
-  },
-  "components": {
-    "schemas": {
-      "Training": {
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "integer",
-            "example": 1,
-            "description": "Training unique identifier"
-          },
-          "training_name": {
-            "type": "string",
-            "example": "Phishing Awareness Training",
-            "description": "Training name"
-          },
-          "training_desc": {
-            "type": "string",
-            "example": "Training program focused on phishing awareness.",
-            "description": "Training description"
-          },
-          "training_start": {
-            "type": "string",
-            "format": "date",
-            "example": "2023-10-01",
-            "description": "Training start date"
-          },
-          "training_end": {
-            "type": "string",
-            "format": "date",
-            "example": "2023-10-31",
-            "description": "Training end date"
-          },
-          "resource_user": {
-            "type": "integer",
-            "example": 123,
-            "description": "Employee managing the training"
-          },
-          "max_phishing_mail": {
-            "type": "integer",
-            "example": 50,
-            "description": "Max phishing emails for training"
-          },
-          "dept_target": {
-            "type": "array",
-            "items": {
-              "type": "string"
+    },
+    "components": {
+      "schemas": {
+        "Training": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "integer",
+              "example": 1,
+              "description": "Training unique identifier"
             },
-            "description": "Target departments list"
-          },
-          "role_target": {
-            "type": "array",
-            "items": {
-              "type": "string"
+            "training_name": {
+              "type": "string",
+              "example": "Phishing Awareness Training",
+              "description": "Training name"
             },
-            "description": "Target roles list"
-          },
-          "status": {
-            "type": "string",
-            "example": "RUN",
-            "description": "Training status",
-            "enum": ["PLAN", "RUN", "FIN"]
-          }
-        },
-        "required": [
-          "training_name",
-          "training_desc",
-          "training_start",
-          "training_end",
-          "resource_user",
-          "max_phishing_mail",
-          "dept_target",
-          "role_target"
-        ]
-      },
-      "Admin": {
-        "type": "object",
-        "properties": {
-          "admin_id": {
-            "type": "string",
-            "example": "admin123",
-            "description": "Admin identifier"
-          },
-          "admin_pw": {
-            "type": "string",
-            "example": "password123",
-            "description": "Admin password"
-          }
-        },
-        "required": ["admin_id", "admin_pw"]
-      },
-      "CompleteTraining": {
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "integer",
-            "description": "Deleted training unique identifier"
-          },
-          "original_id": {
-            "type": "integer",
-            "description": "ID of the original training"
-          },
-          "training_desc": {
-            "type": "string",
-            "description": "Description of the training"
-          },
-          "training_start": {
-            "type": "string",
-            "format": "date",
-            "description": "Start date of the training"
-          },
-          "training_end": {
-            "type": "string",
-            "format": "date",
-            "description": "End date of the training"
-          },
-          "resource_user": {
-            "type": "integer",
-            "description": "ID of the resource employee who created the training"
-          },
-          "max_phishing_mail": {
-            "type": "integer",
-            "description": "Maximum number of phishing emails sent during the training"
-          },
-          "dept_target": {
-            "type": "array",
-            "items": {
-              "type": "string"
+            "training_desc": {
+              "type": "string",
+              "example": "Training program focused on phishing awareness.",
+              "description": "Training description"
             },
-            "description": "List of targeted departments"
-          },
-          "role_target": {
-            "type": "array",
-            "items": {
-              "type": "string"
+            "training_start": {
+              "type": "string",
+              "format": "date",
+              "example": "2023-10-01",
+              "description": "Training start date"
             },
-            "description": "List of targeted roles"
-          },
-          "created_at": {
-            "type": "string",
-            "format": "date-time",
-            "description": "Creation date of the deleted training record"
-          },
-          "is_finished": {
-            "type": "boolean",
-            "description": "Indicates whether the training is finished"
-          },
-          "status": {
-            "type": "string",
-            "description": "Status of the deleted training (optional)"
-          },
-          "deleted_at": {
-            "type": "string",
-            "format": "date-time",
-            "description": "Date and time when the training was deleted"
-          }
-        },
-        "required": [
-          "training_desc",
-          "training_start",
-          "training_end",
-          "resource_user",
-          "max_phishing_mail",
-          "dept_target",
-          "role_target"
-        ]
-      },
-      "Department": {
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "integer",
-            "example": 1,
-            "description": "Department unique identifier"
-          },
-          "name": {
-            "type": "string",
-            "example": "Human Resources",
-            "description": "Name of the department"
-          },
-          "code1": {
-            "type": "string",
-            "example": "HR01",
-            "description": "Department code 1"
-          },
-          "code2": {
-            "type": "string",
-            "example": "HR-General",
-            "description": "Department code 2"
-          },
-          "korean_name": {
-            "type": "string",
-            "example": "인사부",
-            "description": "Department name in Korean"
-          },
-          "dept_target": {
-            "type": "array",
-            "items": {
-              "type": "string"
+            "training_end": {
+              "type": "string",
+              "format": "date",
+              "example": "2023-10-31",
+              "description": "Training end date"
             },
-            "description": "Target departments list"
-          }
+            "resource_user": {
+              "type": "integer",
+              "example": 123,
+              "description": "Employee managing the training"
+            },
+            "max_phishing_mail": {
+              "type": "integer",
+              "example": 50,
+              "description": "Max phishing emails for training"
+            },
+            "dept_target": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "Target departments list"
+            },
+            "role_target": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "Target roles list"
+            },
+            "status": {
+              "type": "string",
+              "example": "RUN",
+              "description": "Training status",
+              "enum": ["PLAN", "RUN", "FIN"]
+            }
+          },
+          "required": [
+            "training_name",
+            "training_desc",
+            "training_start",
+            "training_end",
+            "resource_user",
+            "max_phishing_mail",
+            "dept_target",
+            "role_target"
+          ]
         },
-        "required": ["name", "code1", "code2", "korean_name"]
+        "Admin": {
+          "type": "object",
+          "properties": {
+            "admin_id": {
+              "type": "string",
+              "example": "admin123",
+              "description": "Admin identifier"
+            },
+            "admin_pw": {
+              "type": "string",
+              "example": "password123",
+              "description": "Admin password"
+            }
+          },
+          "required": ["admin_id", "admin_pw"]
+        },
+        "CompleteTraining": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "integer",
+              "description": "Deleted training unique identifier"
+            },
+            "original_id": {
+              "type": "integer",
+              "description": "ID of the original training"
+            },
+            "training_desc": {
+              "type": "string",
+              "description": "Description of the training"
+            },
+            "training_start": {
+              "type": "string",
+              "format": "date",
+              "description": "Start date of the training"
+            },
+            "training_end": {
+              "type": "string",
+              "format": "date",
+              "description": "End date of the training"
+            },
+            "resource_user": {
+              "type": "integer",
+              "description": "ID of the resource employee who created the training"
+            },
+            "max_phishing_mail": {
+              "type": "integer",
+              "description": "Maximum number of phishing emails sent during the training"
+            },
+            "dept_target": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "List of targeted departments"
+            },
+            "role_target": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "List of targeted roles"
+            },
+            "created_at": {
+              "type": "string",
+              "format": "date-time",
+              "description": "Creation date of the deleted training record"
+            },
+            "is_finished": {
+              "type": "boolean",
+              "description": "Indicates whether the training is finished"
+            },
+            "status": {
+              "type": "string",
+              "description": "Status of the deleted training (optional)"
+            },
+            "deleted_at": {
+              "type": "string",
+              "format": "date-time",
+              "description": "Date and time when the training was deleted"
+            }
+          },
+          "required": [
+            "training_desc",
+            "training_start",
+            "training_end",
+            "resource_user",
+            "max_phishing_mail",
+            "dept_target",
+            "role_target"
+          ]
+        },
+        "Department": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "integer",
+              "example": 1,
+              "description": "Department unique identifier"
+            },
+            "name": {
+              "type": "string",
+              "example": "Human Resources",
+              "description": "Name of the department"
+            },
+            "code1": {
+              "type": "string",
+              "example": "HR01",
+              "description": "Department code 1"
+            },
+            "code2": {
+              "type": "string",
+              "example": "HR-General",
+              "description": "Department code 2"
+            },
+            "korean_name": {
+              "type": "string",
+              "example": "인사부",
+              "description": "Department name in Korean"
+            },
+            "dept_target": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "Target departments list"
+            }
+          },
+          "required": ["name", "code1", "code2", "korean_name"]
+        },
+        "Employee": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "integer",
+              "example": 1,
+              "description": "Employee unique identifier"
+            },
+            "name": {
+              "type": "string",
+              "example": "ADMIN",
+              "description": "Name of the employee"
+            },
+            "email": {
+              "type": "string",
+              "example": "test1@example.com",
+              "description": "Employee's email address"
+            },
+            "password": {
+              "type": "string",
+              "example": "igloo1234",
+              "description": " password of the employee"
+            },
+            "role_name": {
+              "type": "string",
+              "example": "Manager",
+              "description": "Role assigned to the employee"
+            },
+            "department_name": {
+              "type": "string",
+              "example": "Human Resources",
+              "description": "Department of the employee"
+            },
+            "admin_id": {
+              "type": "string",
+              "example": "admin123",
+              "description": "Admin identifier"
+            },
+            "admin_pw": {
+              "type": "string",
+              "example": "password123",
+              "description": "Admin password"
+            }
+          },
+          "required": [
+            "name",
+            "email",
+            "password",
+            "role_name",
+            "department_name"
+          ]
+        },
+        "Email": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "integer",
+              "example": 1,
+              "description": "Email unique identifier"
+            },
+            "subject": {
+              "type": "string",
+              "example": "Your Weekly Update",
+              "description": "Email subject"
+            },
+            "body": {
+              "type": "string",
+              "example": "This is the body of the email.",
+              "description": "Email content"
+            },
+            "sender": {
+              "type": "string",
+              "example": "no-reply@example.com",
+              "description": "Email sender"
+            },
+            "recipient": {
+              "type": "string",
+              "example": "user@example.com",
+              "description": "Email recipient"
+            },
+            "sent_date": {
+              "type": "string",
+              "format": "date-time",
+              "example": "2023-09-12T08:00:00Z",
+              "description": "Email sent date"
+            },
+            "is_phishing": {
+              "type": "boolean",
+              "example": false,
+              "description": "Flag indicating if the email is phishing"
+            },
+            "employee_id": {
+              "type": "integer",
+              "example": 123,
+              "description": "Associated employee ID"
+            },
+            "training_id": {
+              "type": "integer",
+              "example": 1,
+              "description": "Associated training ID"
+            }
+          },
+          "required": ["subject", "body", "sender", "recipient"]
+        },
+        "EventLog": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "integer",
+              "example": 1,
+              "description": "Event Log unique identifier"
+            },
+            "timestamp": {
+              "type": "string",
+              "format": "date-time",
+              "example": "2023-09-12T08:00:00Z",
+              "description": "Event timestamp"
+            },
+            "message": {
+              "type": "string",
+              "example": "Log entry message",
+              "description": "Event message content"
+            },
+            "trainingId": {
+              "type": "integer",
+              "example": 123,
+              "description": "Training ID associated with this event"
+            },
+            "action": {
+              "type": "string",
+              "example": "targetSetting",
+              "description": "Action taken during the event"
+            }
+          },
+          "required": ["timestamp", "message", "trainingId"]
+        },
+        "Role": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "integer",
+              "example": 1,
+              "description": "Role unique identifier"
+            },
+            "name": {
+              "type": "string",
+              "example": "Admin",
+              "description": "Role name"
+            },
+            "permissions": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "example": ["read", "write"],
+              "description": "Role permissions"
+            }
+          },
+          "required": ["name", "permissions"]
+        }
       },
-      "Employee": {
+      "securitySchemes": {
+        "bearerAuth": {
+          "type": "http",
+          "scheme": "bearer",
+          "bearerFormat": "JWT"
+        }
+      },
+      "Error": {
         "type": "object",
         "properties": {
-          "id": {
-            "type": "integer",
-            "example": 1,
-            "description": "Employee unique identifier"
-          },
-          "name": {
-            "type": "string",
-            "example": "ADMIN",
-            "description": "Name of the employee"
-          },
-          "email": {
-            "type": "string",
-            "example": "test1@example.com",
-            "description": "Employee's email address"
-          },
-          "password": {
-            "type": "string",
-            "example": "igloo1234",
-            "description": " password of the employee"
-          },
-          "role_name": {
-            "type": "string",
-            "example": "Manager",
-            "description": "Role assigned to the employee"
-          },
-          "department_name": {
-            "type": "string",
-            "example": "Human Resources",
-            "description": "Department of the employee"
-          },
-          "admin_id": {
-            "type": "string",
-            "example": "admin123",
-            "description": "Admin identifier"
-          },
-          "admin_pw": {
-            "type": "string",
-            "example": "password123",
-            "description": "Admin password"
-          }
-        },
-        "required": [
-          "name",
-          "email",
-          "password",
-          "role_name",
-          "department_name"
-        ]
-      },
-      "Email": {
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "integer",
-            "example": 1,
-            "description": "Email unique identifier"
-          },
-          "subject": {
-            "type": "string",
-            "example": "Your Weekly Update",
-            "description": "Email subject"
-          },
-          "body": {
-            "type": "string",
-            "example": "This is the body of the email.",
-            "description": "Email content"
-          },
-          "sender": {
-            "type": "string",
-            "example": "no-reply@example.com",
-            "description": "Email sender"
-          },
-          "recipient": {
-            "type": "string",
-            "example": "user@example.com",
-            "description": "Email recipient"
-          },
-          "sent_date": {
-            "type": "string",
-            "format": "date-time",
-            "example": "2023-09-12T08:00:00Z",
-            "description": "Email sent date"
-          },
-          "is_phishing": {
-            "type": "boolean",
-            "example": false,
-            "description": "Flag indicating if the email is phishing"
-          },
-          "employee_id": {
-            "type": "integer",
-            "example": 123,
-            "description": "Associated employee ID"
-          },
-          "training_id": {
-            "type": "integer",
-            "example": 1,
-            "description": "Associated training ID"
-          }
-        },
-        "required": ["subject", "body", "sender", "recipient"]
-      },
-      "EventLog": {
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "integer",
-            "example": 1,
-            "description": "Event Log unique identifier"
-          },
-          "timestamp": {
-            "type": "string",
-            "format": "date-time",
-            "example": "2023-09-12T08:00:00Z",
-            "description": "Event timestamp"
-          },
           "message": {
-            "type": "string",
-            "example": "Log entry message",
-            "description": "Event message content"
-          },
-          "trainingId": {
-            "type": "integer",
-            "example": 123,
-            "description": "Training ID associated with this event"
-          },
-          "action": {
-            "type": "string",
-            "example": "targetSetting",
-            "description": "Action taken during the event"
+            "type": "string"
           }
-        },
-        "required": ["timestamp", "message", "trainingId"]
-      },
-      "Role": {
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "integer",
-            "example": 1,
-            "description": "Role unique identifier"
-          },
-          "name": {
-            "type": "string",
-            "example": "Admin",
-            "description": "Role name"
-          },
-          "permissions": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            },
-            "example": ["read", "write"],
-            "description": "Role permissions"
-          }
-        },
-        "required": ["name", "permissions"]
-      }
-    },
-    "securitySchemes": {
-      "bearerAuth": {
-        "type": "http",
-        "scheme": "bearer",
-        "bearerFormat": "JWT"
-      }
-    },
-    "Error": {
-      "type": "object",
-      "properties": {
-        "message": {
-          "type": "string"
         }
       }
     }
