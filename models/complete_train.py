@@ -38,7 +38,6 @@ class CompleteTraining(BaseModel):
     resource_user = db.Column(db.Integer, nullable=False)
     max_phishing_mail = db.Column(db.Integer, nullable=False)
     dept_target = db.Column(JSONEncodedDict, nullable=False)
-    role_target = db.Column(JSONEncodedDict, nullable=False)
     status = db.Column(db.Enum(TrainingStatus), default=TrainingStatus.FIN, nullable=False)
 
     completed_at = db.Column(db.DateTime, default=datetime.utcnow)
@@ -56,8 +55,7 @@ class CompleteTraining(BaseModel):
             'training_end': self.training_end.strftime('%Y-%m-%d %H:%M:%S') if self.training_end else None,
             'resource_user': self.resource_user,
             'max_phishing_mail': self.max_phishing_mail,
-            'dept_target': self.dept_target.split(',') if self.dept_target else [],
-            'role_target': self.role_target.split(',') if self.role_target else [],
+            'dept_target': self.dept_target, 
             'completed_at': self.completed_at.strftime('%Y-%m-%d %H:%M:%S') if self.completed_at else None,
             'emails': [email.to_dict() for email in self.emails]  # Assuming Email has a to_dict method
             }

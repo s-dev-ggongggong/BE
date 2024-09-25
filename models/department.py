@@ -8,11 +8,11 @@ class Department(BaseModel,SerializableMixin):
     code1 = db.Column(db.String(10), nullable=False)
     code2 = db.Column(db.String(50), nullable=False)
     korean_name = db.Column(db.String(100), nullable=False)
-
- 
-    dept_target = db.Column(db.Text)
+    
+     
     employees = db.relationship('Employee', back_populates='department')
-    trainings  = db.Column(db.String(255))  # 리스트를 문자열로 저장
+    trainings = db.relationship('Training', back_populates='department')
+ # 리스트를 문자열로 저장
 
     def __repr__(self):
         return f'<Department {self.name}>'
@@ -25,7 +25,7 @@ class Department(BaseModel,SerializableMixin):
             'code2': self.code2,
             'korean_name': self.korean_name,  # korean_name is a string, no isoformat() needed
             'employees': [emp.id for emp in self.employees],  # Returning a list of employee IDs
-            'dept_target': self.dept_target.split(',') if self.dept_target else []  # Converting to list
+            
         }
     
     @staticmethod

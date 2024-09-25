@@ -19,10 +19,7 @@ class EventLog(BaseModel):
     action = db.Column(db.String(50), nullable=False)
     timestamp = db.Column(db.DateTime, nullable=False)
     training_id = db.Column(db.Integer, db.ForeignKey('trainings.id'), nullable=False)
-    department_id = db.Column(db.String(255))
-    employee_id = db.Column(db.String(255))
-    email_id = db.Column(db.String(255))
-    role_id = db.Column(db.String(255))
+    department_id = db.Column(db.Integer,db.ForeignKey('departments.id'),nullable=False)
     data = db.Column(db.Text, nullable=True, default="")
 
     training = db.relationship('Training', backref='event_logs')
@@ -44,10 +41,7 @@ class EventLog(BaseModel):
             'action': self.action,
             'timestamp': self.timestamp.strftime('%Y-%m-%d %H:%M:%S'),
             'trainingId': self.training_id,
-            'employeeId': safe_json_loads(self.employee_id),
             'departmentId': safe_json_loads(self.department_id),
-            'emailId': safe_json_loads(self.email_id),
-            'roleId': safe_json_loads(self.role_id),
             'data': self.data
         }
 

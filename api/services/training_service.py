@@ -52,25 +52,16 @@ def convert_date_string_to_datetime(date_string):
 
 def create_event_log_for_training(training, session):
     try:
-        dept_targets = json.loads(training.dept_target)
-        role_targets = json.loads(training.role_target)
+        dept_targets = training.dept_target
+        if not dept_targets:
+            logger.warning(f"No department targets for training ID {training.id}")
+            return
         
-        employees = Employee.query.filter(
-            or_(Employee.department_id.in_(dept_targets),
-                Employee.role_id.in_(role_targets))
-        ).all()
-        
-        employee_ids = [emp.id for emp in employees]
-        email_ids = [email.id for emp in employees for email in emp.emails]
-
         event_log = EventLog(
             action="targetSetting",
             timestamp=training.training_start,
             training_id=training.id,
             department_id=json.dumps(dept_targets),
-            role_id=json.dumps(role_targets),
-            employee_id=json.dumps(employee_ids),
-            email_id=json.dumps(email_ids),
             data="agent"
         )
         session.add(event_log)
@@ -111,18 +102,17 @@ def create_training_service(data):
                 'training_desc': data.get('trainingDesc', '').strip(),
                 'training_start': convert_date_string_to_datetime(data.get('trainingStart')),
                 'training_end': convert_date_string_to_datetime(data.get('trainingEnd')),
-                 'dept_target': json.dumps(data.get('deptTarget'), ensure_ascii=False),
-                 'role_target': json.dumps(data.get('roleTarget'), ensure_ascii=False),
+                'dept_target':  data.get('deptTarget', '[]'), 
                 'resource_user': data.get('resourceUser'),
                 'max_phishing_mail': data.get('maxPhishingMail')
             }
 
             # Validate that mandatory fields are provided and not empty
-            for field in ['training_name', 'training_desc', 'training_start', 'training_end', 'resource_user']:
+            for field in ['training_name', 'training_desc', 'training_start', 'training_end', 'resource_user', 'dept_target']:
                 if not mapped_data[field]:
                     return handle_response(400, message=f"{field.replace('_', ' ').capitalize()} is required and cannot be empty.")
 
-            if not mapped_data['dept_target'] or not mapped_data['role_target']:
+            if not mapped_data['dept_target'] :
                 return handle_response(400, message="Department target and role target must have at least one non-empty value each.")
 
             # Check for existing records with the same values
@@ -134,7 +124,6 @@ def create_training_service(data):
                 Training.max_phishing_mail == mapped_data['max_phishing_mail'],
                 Training.resource_user == mapped_data['resource_user'],
                 Training.dept_target == mapped_data['dept_target'],
-                Training.role_target == mapped_data['role_target']
             ).first()
 
             if existing_training:
@@ -237,8 +226,6 @@ def update_training_service(id, data):
                 updated_data['training_end'] = convert_date_string_to_datetime(data['trainingEnd'].strip())
             if 'deptTarget' in data:
                 updated_data['dept_target'] = [item.strip() for item in data['deptTarget'] if item.strip()]
-            if 'roleTarget' in data:
-                updated_data['role_target'] = [item.strip() for item in data['roleTarget'] if item.strip()]
             if 'resourceUser' in data:
                 # Handle resourceUser as either string or integer
                 if isinstance(data['resourceUser'], str) and data['resourceUser'].strip():

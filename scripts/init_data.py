@@ -1,8 +1,9 @@
 import json
 import re
+from sqlalchemy import or_
 from sqlalchemy.exc import SQLAlchemyError
 from extensions import db
-from models.training import Training
+from models.training import Training, TrainingStatus
 from models.department import Department
 from models.employee import Employee
 from models.email import Email
@@ -27,7 +28,9 @@ def validate_targets(value):
     except json.JSONDecodeError:
         print(f"Invalid JSON data: {value}")
         return []
-    
+def initialize_db():
+    db.drop_all()
+    db.create_all()    
 def camel_to_snake(name):
     import re
     s1 = re.sub('(.)([A-Z][a-z]+)', r'\1_\2', name)
@@ -56,10 +59,10 @@ def load_departments(data):
 def load_roles(data):
     for item in data:
         item = process_data(item)
-        existing = Role.query.filter_by(name=item['name']).first()
-        if existing:
+        role = Role.query.filter(or_(Role.name == item['name'], Role.korean_name == item['korean_name'])).first()
+        if role:
             for key, value in item.items():
-                setattr(existing, key, value)
+                setattr(role, key, value)
         else:
             role = Role(**item)
             db.session.add(role)
@@ -67,44 +70,80 @@ def load_roles(data):
 
 
 def load_trainings(training_data):
+    departments = {d.id: d.id for d in Department.query.all()}
     for item in training_data:
-        try:
-            # Convert keys to snake_case
-            item = convert_keys_to_snake_case(item)
-            
-            # Convert date strings to datetime objects
-            item['training_start'] = convert_date_string_to_datetime(item['training_start'])
-            item['training_end'] = convert_date_string_to_datetime(item['training_end'])
-
-            # Create Training object and add to session
-            training = Training(**item)
-            db.session.add(training)
-        except SQLAlchemyError as e:
-            print(f"An error occurred while adding training: {e}")
-            db.session.rollback()   
-
-
+        item.pop('id', None) 
+        item = convert_keys_to_snake_case(item)
+        item['training_start'] = convert_date_string_to_datetime(item['training_start'])
+        item['training_end'] = convert_date_string_to_datetime(item['training_end'])
+        # JSON 변환 제거, 리스트 그대로 유지
+        
+        if item['dept_target']:
+            dept_id = item['dept_target'][0]  # 첫 번째 부서 ID를 사용
+            if dept_id in departments:
+                item['department_id'] = dept_id
+            else:
+                print(f"Warning: Invalid department_id {dept_id} for training {item.get('training_name', 'Unknown')}")
+                continue
+        
+        training = Training(**item)
+        db.session.add(training)
+    
+    db.session.commit()
+ 
 
 def load_employees(data):
-    departments = {d.korean_name: d.id for d in Department.query.all()}
-    roles = {r.korean_name: r.id for r in Role.query.all()}
+    departments = {d.id: d for d in Department.query.all()}
+    roles = {r.korean_name.strip(): r for r in Role.query.all()}
 
+    # ADMIN 계정 먼저 처리
+    admin_data = next(item for item in data if item['name'] == 'ADMIN')
+    admin_role = roles.get(admin_data['role_name'].strip())
+    admin_dept = departments.get(admin_data['department_id'])
+
+    if not admin_role or not admin_dept:
+        print("Error: ADMIN role or department not found")
+        return
+
+    admin = Employee.query.filter_by(name='ADMIN').first()
+    if not admin:
+        admin = Employee(
+            id=1,
+            name='ADMIN',
+            email=admin_data['email'],
+            password=admin_data['password'],
+            department_id=admin_dept.id,
+            role_id=admin_role.id,
+            is_admin=True
+        )
+        db.session.add(admin)
+    else:
+        admin.email = admin_data['email']
+        admin.password = admin_data['password']
+        admin.department_id = admin_dept.id
+        admin.role_id = admin_role.id
+        admin.is_admin = True
+
+    # 나머지 직원 처리
     for item in data:
-        department_id = departments.get(item['department_name'])
-        role_id = roles.get(item['role_name'])
+        if item['name'] == 'ADMIN':
+            continue
 
-        if department_id is None or role_id is None:
-            print(f"Warning: Department or Role not found for employee {item['name']}")
+        role = roles.get(item['role_name'].strip())
+        department = departments.get(item['department_id'])
+
+        if not role or not department:
+            print(f"Warning: Role or Department not found for employee {item['name']}")
             continue
 
         try:
             employee = Employee(
                 name=item['name'],
                 email=item['email'],
-                password=item['password'],  # Hash password for secure storage
-                department_id=department_id,
-                role_id=role_id,
-                is_admin=item['name'] == 'ADMIN'
+                password=item['password'],
+                department_id=department.id,
+                role_id=role.id,
+                is_admin=False
             )
             db.session.add(employee)
         except SQLAlchemyError as e:
@@ -112,42 +151,41 @@ def load_employees(data):
             db.session.rollback()
 
     db.session.commit()
-
+ 
 
 def load_emails(emails):
     for item in emails:
         # Convert the email data to the correct schema for the Email model
         email_data = {
-            'subject': item['subject'],
-            'body': item['body'],
-            'sender': item['from'],  # Changed from 'from' to 'sender'
-            'recipient': item['to'],  # Changed from 'to' to 'recipient'
-            'sent_date': convert_date_string_to_datetime(item['date']),  # Changed from 'date' to 'sent_date'
-            'making_phishing': 0  # 기본값 설정
-
+        'subject': item['subject'],
+        'body': item['body'],
+        'sender': item['from'],
+        'recipient': item['to'],
+        'sent_date': convert_date_string_to_datetime(item['date']),
+        'making_phishing': 0
         }
 
         email = Email(**email_data)
         db.session.add(email)
     db.session.commit()
 
-def load_event_logs(event_logs):
-    for item in event_logs:
-        event_log_data = {
-            'action': item['action'],
-            'timestamp': convert_date_string_to_datetime(item['timestamp']),
-            'training_id': item['trainingId'],
-            'employee_id': ','.join(map(str, item['employeeId'])),
-            'department_id': ','.join(map(str, item['departmentId'])),
-            'email_id': ','.join(map(str, item['emailId'])),
-            'role_id': ','.join(map(str, item['roleId'])),
-            'data': item['data']
-        }
+# def load_event_logs(event_logs):
+#     for item in event_logs:
+#         event_log_data = {
+#             'action': item['action'],
+#             'timestamp': convert_date_string_to_datetime(item['timestamp']),
+#             'training_id': item['trainingId'],
+#             'employee_id': ','.join(map(str, item['employeeId'])),
+#             'department_id': ','.join(map(str, item['departmentId'])),
+#             'email_id': ','.join(map(str, item['emailId'])),
+#             'role_id': ','.join(map(str, item['roleId'])),
+#             'data': item['data']
+#         }
         
-        event_log = EventLog(**event_log_data)
-        db.session.add(event_log)
+#         event_log = EventLog(**event_log_data)
+#         db.session.add(event_log)
     
-    db.session.commit()
+#     db.session.commit()
 
 # Call the function to load event logs
 
@@ -155,38 +193,19 @@ def load_event_logs(event_logs):
 def main():
     app = create_app()
     with app.app_context():
-        db.session.query(Employee).delete()
-        db.session.query(Training).delete()  # Clear existing data if necessary
-        db.session.commit()
-
+        initialize_db()  # Clear existing data if necessary
+         
         departments = load_json('data/departments.json')
         load_departments(departments)
-
         roles = load_json('data/roles.json')
         load_roles(roles)
-
-       
-
         employees = load_json('data/employees.json')
         load_employees(employees)
-        print("Employee data successfully loaded.")
-
         trainings = load_json('data/trainings.json')
         load_trainings(trainings)
-       
         emails = load_json('data/emails.json')
         load_emails(emails)
-
-
-        events = load_json('data/event_logs.json')
-        load_event_logs(events)
-
-        
-        print("Data successfully loaded.")
-
- 
-        print("All trainings have been successfully added.")
- 
+        print("All data loaded successfully.")
  
 if __name__ == '__main__':
     main()

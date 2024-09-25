@@ -11,8 +11,10 @@ class TrainingStatus(Enum):
     RUN = "RUN"
     FIN = "FIN"
 
-class JSONEncodedDict(TypeDecorator):
-    impl = db.Text
+
+class JSONEncodedList(TypeDecorator):
+    impl = TEXT
+    cache_ok = True
 
     def process_bind_param(self, value, dialect):
         if value is not None:
@@ -34,25 +36,14 @@ class Training(BaseModel):
     training_end = db.Column(db.DateTime, nullable=False)
     resource_user = db.Column(db.Integer, nullable=False)
     max_phishing_mail = db.Column(db.Integer, nullable=False)
-    dept_target = db.Column(db.Text, nullable=False)
-    role_target = db.Column(db.Text, nullable=False)
-
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    dept_target = db.Column(JSONEncodedList, nullable=False)
+ 
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
     is_finished = db.Column(db.Boolean, default=False)
     status = db.Column(db.Enum(TrainingStatus), default=TrainingStatus.PLAN, nullable=False)
 
     is_deleted = db.Column(db.Boolean, default=False)
     deleted_at = db.Column(db.DateTime, nullable=True)
 
-    
-    @validates('dept_target', 'role_target')
-    def validate_json_fields(self, key, value):
-        if isinstance(value, (list, dict)):
-            return json.dumps(value)
-        elif isinstance(value, str):
-            try:
-                json.loads(value)  # JSON 형식 검증
-                return value
-            except json.JSONDecodeError:
-                raise ValueError(f"Invalid JSON for {key}")
-        raise ValueError(f"Invalid type for {key}: {type(value)}")
+    department_id = db.Column(db.Integer, db.ForeignKey('departments.id'))
+    department = db.relationship('Department', back_populates='trainings')

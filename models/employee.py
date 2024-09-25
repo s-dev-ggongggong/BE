@@ -9,7 +9,7 @@ class Employee(BaseModel,SerializableMixin):
     email = db.Column(db.String(100), unique=True, nullable=False)
     password = db.Column(db.String(255), nullable=False)
     
-    role_id = db.Column(db.String(50), db.ForeignKey('roles.id'), nullable=False)
+    role_id = db.Column(db.Integer, db.ForeignKey('roles.id'), nullable=False)
     department_id = db.Column(db.Integer, db.ForeignKey('departments.id'), nullable=False)
     is_admin = db.Column(db.Boolean, default=False)
 

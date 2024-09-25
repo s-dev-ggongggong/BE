@@ -3,7 +3,7 @@ import os
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 import json
 from datetime import datetime
-from sqlalchemy.exc import SQLAlchemyError
+from sqlalchemy.exc import SQLAlchemyError ,IntegrityError
 from extensions import db
 from models.event_log import EventLog
 from models.training import Training
@@ -21,9 +21,6 @@ def camel_to_snake(name):
     s1 = re.sub('(.)([A-Z][a-z]+)', r'\1_\2', name)
     return re.sub('([a-z0-9])([A-Z])', r'\1_\2', s1).lower()
 
-def load_json(file_path):
-    with open(file_path, 'r', encoding='utf-8') as file:
-        return json.load(file)
 
 def ensure_list(field):
     """Ensure the field is a properly formatted list."""
@@ -51,7 +48,7 @@ def process_event(event_data, session):
         print("Warning: Missing 'training_id' in event data.")
         return None
 
-    for field in ['employee_id', 'department_id', 'email_id', 'role_id']:
+    for field in ['department_id']:
         if field in event_data:
             event_data[field] = json.dumps(ensure_list(event_data.get(field, [])))
 
@@ -64,11 +61,59 @@ def process_event(event_data, session):
     return event_data
 
 
+def load_event_logs(file_path):
+    app = create_app()
+    with app.app_context():
+        with open(file_path, 'r') as file:
+            event_logs = json.load(file)
+            
 
+        for log in event_logs:
+            try:
+                # Safely handle trainingId as either string or integer
+                training_id = log.get('trainingId')
+                if isinstance(training_id, str):
+                    training_id = int(training_id) if training_id.isdigit() else None
+                elif isinstance(training_id, int):
+                    training_id = training_id
+                else:
+                    training_id = None  # Handle any other unexpected format
+
+                # Map log fields to EventLog model attributes
+                event = EventLog(
+                    id=log.get('id'),
+                    action=log.get('action'),
+                    timestamp=log.get('timestamp'),
+                    training_id=training_id,
+                    department_id=log.get('departmentId'),  # Assuming department_id is a list of integers
+                    data=log.get('data')
+                )
+
+                # Add event log to session
+                db.session.add(event)
+
+            except IntegrityError as e:
+                db.session.rollback()
+                print(f"Integrity error while processing log ID {log.get('id')}: {str(e)}")
+
+            except Exception as e:
+                db.session.rollback()
+                print(f"Error processing log ID {log.get('id')}: {str(e)}")
+
+        # Commit the session after processing all logs
+        try:
+            db.session.commit()
+            print("All event logs loaded successfully.")
+        except Exception as e:
+            db.session.rollback()
+            print(f"Error committing session: {str(e)}")
+
+# Run the function with the updated event logs JSON path
+ 
 
 def process_field(key, value, session):
     
-    if key in ['employee_id', 'email_id', 'dept_id' ,'role_id' ]:
+    if key in [ 'department_id' ]:
         if isinstance(key, str):
             return json.dumps(value if isinstance(value, list) else [value])
     elif key == 'department_id':
@@ -126,22 +171,6 @@ def update_or_create_event(event_data, session):
         new_event = EventLog(**event_data)
         session.add(new_event)
 
-def load_event_logs(file_path):
-    app = create_app()
-    with app.app_context():
-        try:
-            events_data = load_json(file_path)
-            for event_data in events_data:
-                processed_event = process_event(event_data, db.session)
-                if processed_event:
-                    update_or_create_event(processed_event, db.session)
-            db.session.commit()
-            print(f"Processed and loaded {len(events_data)} events")
-        except SQLAlchemyError as e:
-            db.session.rollback()
-            print(f"An error occurred: {str(e)}")
-        finally:
-            db.session.close()
 
 def handle_events(events_data, session):
     """Handle multiple events data."""
