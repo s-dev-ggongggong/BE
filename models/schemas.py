@@ -1,5 +1,5 @@
 from flask import json
-from marshmallow import fields, post_load, validates, ValidationError,validates_schema, pre_load, post_dump
+from marshmallow import Schema, fields, EXCLUDE, post_load, ValidationError, pre_load, post_dump
 from sqlalchemy import or_
 from extensions import ma, db
 from marshmallow_sqlalchemy import SQLAlchemyAutoSchema
@@ -10,13 +10,70 @@ from models.training import Training
 from models.email import Email
 from models.complete_train import CompleteTraining
 from models.event_log import EventLog
+from marshmallow_enum import EnumField
+from models.training import TrainingStatus 
  
+import logging
+ 
+
+logger = logging.getLogger(__name__)
+
+class DeptTargetField(fields.Field):
+    def _deserialize(self, value, attr, data, **kwargs):
+        print(f"DeptTargetField _deserialize 호출: value={value}, attr={attr}")
+        if value is None or value == []:
+            return '[]'
+        if isinstance(value, list):
+            return json.dumps(value)
+        if isinstance(value, str):
+            try:
+                json.loads(value)
+                return value
+            except json.JSONDecodeError:
+                raise ValidationError("Invalid JSON string")
+        raise ValidationError(f"Invalid type for dept_target: {type(value)}")
+        
+class JSONList(fields.Field):
+    def _serialize(self, value, attr, obj, **kwargs):
+        if value:
+            try:
+                return json.loads(value)
+            except json.JSONDecodeError:
+                raise ValidationError("Invalid JSON format.")
+        return []
+
+    def _deserialize(self, value, attr, data, **kwargs):
+        if isinstance(value, list):
+            return json.dumps(value)
+        raise ValidationError("Invalid input type. Expected a list.")
+
+
+
+class FlexibleDateTime(fields.DateTime):
+    def _deserialize(self, value, attr, data, **kwargs):
+        # 우선 기본 형식으로 시도합니다.
+        try:
+            return super()._deserialize(value, attr, data, **kwargs)
+        except ValidationError:
+            pass
+
+        # 추가적인 형식들을 시도합니다.
+        date_formats = ['%Y-%m-%d %H:%M:%S', '%Y-%m-%d %H:%M']
+        for fmt in date_formats:
+            try:
+                return datetime.strptime(value, fmt)
+            except ValueError:
+                continue
+
+        raise ValidationError(f"지원되지 않는 날짜 형식입니다: {value}")
+    
 # Base Schema
 class Base(ma.SQLAlchemyAutoSchema):
     class Meta:
         include_fk = True
         load_instance = True
         sqla_session = db.session
+        unknown = EXCLUDE  
 
 # Define schemas with data_key for camelCaseem
 class DepartmentSchema(Base):
@@ -26,195 +83,148 @@ class DepartmentSchema(Base):
     code2 = fields.Str(data_key="code2")
     korean_name = fields.Str(data_key="koreanName")
     description = fields.Str(data_key="description")
-    dept_target = fields.List(fields.Str(), data_key="deptTarget")
 
+ 
+    class Meta(Base.Meta):
+        model = Department
+        unknown = EXCLUDE  
+
+
+class RoleSchema(Base):
+    id = fields.Int(data_key="id", dump_only=True)
+    name = fields.Str(data_key="name", required=True)
+    korean_name = fields.Str(data_key="koreanName", required=True)
+
+    class Meta(Base.Meta):
+        model = Role
 
     @pre_load
-    def process_targets(self, data, **kwargs):
-        if 'deptTarget' in data and isinstance(data['deptTarget'], list):
-            data['dept_target'] = ','.join(data['deptTarget'])
+    def process_role(self, data, **kwargs):
+        role_name = data.get('roleName')
+        if role_name:
+            role = Role.query.filter_by(korean_name=role_name).first()
+            if role:
+                data['role_id'] = role.id
+            else:
+                raise ValidationError(f"Role '{role_name}' not found.")
+            del data['roleName']
         return data
 
     @post_dump
-    def process_targets_dump(self, data, **kwargs):
-        if 'dept_target' in data and isinstance(data['dept_target'], str):
-            data['deptTarget'] = data['dept_target'].split(',')
+    def add_roleName(self, data, **kwargs):
+        if 'role' in data and data['role']:
+            data['roleName'] = data['role']['korean_name']
+            del data['role']
         return data
-    
-    class Meta(Base.Meta):
-        model = Department
 
-class RoleSchema(Base):
-        id = fields.Int(data_key="id",dump_only=True)
-        name = fields.Str(data_key="name",dump_only=True)
-        korean_name = fields.Str(data_key="koreanName")
-        class Meta(Base.Meta):
-            model = Role
 
 class EmployeeSchema(Base):
     id = fields.Int(dump_only=True)
     name = fields.Str(required=True)
     email = fields.Email(required=True)
-    role_id = fields.Int(required=True)
-    department_id = fields.Int(required=True)
-    is_admin = fields.Boolean(dump_only=True)
+    password = fields.Str(load_only=True, required=True)
+    role_name = fields.Str(data_key="roleName", required=False)
+    department_id = fields.Int(data_key="departmentId")
+    role_id = fields.Int(load_only=True, required=True)  # load_only으로 설정
 
     role = fields.Nested(RoleSchema, only=('id', 'name'))
     department = fields.Nested(DepartmentSchema, only=('id', 'name'))
 
-    class Meta(Base.Meta):
-        model = Employee
-        exclude = ('password',)
+    @post_load
+    def make_employee(self, data, **kwargs):
+        return data
+
+
+    @pre_load
+    def process_role(self, data, **kwargs):
+        role_name = data.get('roleName')
+        if not role_name:
+            raise ValidationError({"roleName": ["Missing data for required field."]})
         
+        role = Role.query.filter_by(korean_name=role_name).first()
+        if role:
+            data['role_id'] = role.id
+        else:
+            raise ValidationError({"roleName": [f"Role '{role_name}' not found."]})
+        
+        # 'roleName' 필드를 제거하여 Employee 생성자에 전달되지 않도록 함
+        del data['roleName']
+        return data
 
-    @validates('role_id')
-    def validate_role(self, value):
-        role = Role.query.get(value)
-        if not role:
-            raise ValidationError('Invalid role ID.')
 
-    @validates('department_id')
-    def validate_department(self, value):
-        department = Department.query.get(value)
-        if not department:
-            raise ValidationError('Invalid department ID.')
-            
-class TrainingSchema(Base):
-    id = fields.Int(dump_only=True)
-    training_name = fields.Str(data_key="trainingName")
-    training_desc = fields.Str(data_key="trainingDesc")
-    training_start = fields.DateTime(data_key="trainingStart", format='iso', load_format='iso')
-    training_end = fields.DateTime(data_key="trainingEnd", format='iso', load_format='iso')
-    resource_user = fields.Int(data_key="resourceUser")
-    max_phishing_mail = fields.Int(data_key="maxPhishingMail")
-    dept_target = fields.List(fields.Integer(), data_key='departTarget', required=True)
+    @post_dump
+    def add_roleName(self, data, **kwargs):
+        if 'role' in data and data['role']:
+            data['roleName'] = data['role']['korean_name']
+            del data['role']
+        return data
     
+    class Meta:
+        model = Employee
+        include_fk = True
+        load_instance = True
+        sqla_session = db.session
+        unknown = EXCLUDE
+
+
+
+from datetime import datetime
+
+    
+class TrainingSchema(SQLAlchemyAutoSchema):
+    id = fields.Int(dump_only=True)
+    training_name = fields.Str(data_key="trainingName", required=True, allow_none=False)
+    training_desc = fields.Str(data_key="trainingDesc", required=True, allow_none=False)
+    training_start = fields.DateTime(data_key="trainingStart", format='iso', required=True, allow_none=False)
+    training_end = fields.DateTime(data_key="trainingEnd", format='iso', required=True, allow_none=False)
+    resource_user = fields.Int(data_key="resourceUser", required=True, allow_none=False)
+    max_phishing_mail = fields.Int(data_key="maxPhishingMail", required=True, allow_none=False)
+    dept_target = DeptTargetField(data_key="deptTarget", required=True, allow_none=True)
+    status = EnumField(TrainingStatus, by_value=True)
+   
+    departments = fields.Nested('DepartmentSchema', many=True, only=['id', 'name'])    
+   
+   
     created_at = fields.DateTime(dump_only=True, format='iso')
     is_finished = fields.Bool(dump_only=True)
     status = fields.Str(dump_only=True)
     is_deleted = fields.Bool(dump_only=True)
-    deleted_at = fields.DateTime(dump_only=True, format='iso', load_format='iso')
-    
+    deleted_at = fields.DateTime(dump_only=True, format='iso')
+    complete_training = fields.Nested('CompleteTrainingSchema', exclude=('original_training',))
+    event_logs = fields.Nested('EventLogSchema', many=True, exclude=('training',))
 
-    @pre_load
-    def process_input(self, data, **kwargs):
-        if 'deptTarget' in data and isinstance(data['deptTarget'], str):
-            data['deptTarget'] = json.loads(data['deptTarget'])
+ 
+    @post_load
+    def process_dept_target(self, data, **kwargs):
+        if isinstance(data, dict) and 'dept_target' in data:
+            if isinstance(data['dept_target'], list):
+                data['dept_target'] = json.dumps(data['dept_target'])
         return data
 
     @post_dump
-    def process_output(self, data, **kwargs):
-        if 'dept_target' in data:
-            data['deptTarget'] = data['dept_target']
-            del data['dept_target']
+    def process_dept_target_dump(self, data, **kwargs):
+        if 'dept_target' in data and isinstance(data['dept_target'], list):
+            data['dept_target'] = json.dumps(data['dept_target'])
         return data
-    
-class Meta(Base.Meta):
+
+    class Meta:
         model = Training
+        include_fk = True
+        load_instance = True
+        sqla_session = db.session
+        unknown = EXCLUDE
+
+
 
 class EventLogSchema(Base):
     id = fields.Int(data_key="id")
     action = fields.Str(data_key="action")
     timestamp = fields.DateTime(data_key="timestamp", format='iso', load_format='iso', dump_format='%Y-%m-%d %H:%M:%S')
     training_id = fields.Int(data_key="trainingId")
-    department_id = fields.Int(data_key="departmentId")
+    department_id = JSONList(data_key="departmentId")
     data = fields.Dict(data_key="data")
+    training = fields.Nested('TrainingSchema', exclude=('event_logs',))
 
-    @pre_load
-    def process_department_id(self, data, **kwargs):
-        if 'departmentId' in data and isinstance(data['departmentId'], list):
-            data['department_id'] = json.dumps(data['departmentId'])
-        return data
-
-    
-    @post_dump
-    def process_department_id_dump(self, data, **kwargs):
-        if 'department_id' in data and isinstance(data['department_id'], str):
-            try:
-                data['departmentId'] = json.loads(data['department_id'])
-                del data['department_id']
-            except json.JSONDecodeError:
-                data['departmentId'] = []
-        return data
-    
-
-    class Meta(Base.Meta):
-        model = EventLog
-    
- 
- 
-
-class CompleteTrainingSchema(Base):
-    id = fields.Int(dump_only=True)
-    original_id = fields.Int(required=True)
-    completed_at = fields.DateTime(dump_only=True, format='iso', load_format='iso', dump_format='%Y-%m-%d %H:%M:%S')
-    
-    training_name = fields.Str(data_key="trainingName")
-    training_desc = fields.Str(data_key="trainingDesc")
-    training_start = fields.DateTime(data_key="trainingStart", format='iso', load_format='iso')
-    training_end = fields.DateTime(data_key="trainingEnd", format='iso', load_format='iso')
-    resource_user = fields.Int(data_key="resourceUser")
-    max_phishing_mail = fields.Int(data_key="maxPhishingMail")
-    dept_target = fields.List(fields.Integer(), data_key='departTarget', required=True)
-
-    @pre_load
-    def process_input(self, data, **kwargs):
-        if 'departTarget' in data and isinstance(data['departTarget'], str):
-            data['departTarget'] = json.loads(data['departTarget'])
-        return data
-
-    @post_dump
-    def process_output(self, data, **kwargs):
-        if 'dept_target' in data:
-            data['departTarget'] = data['dept_target']
-            del data['dept_target']
-        return data
-    
-    class Meta(Base.Meta):
-        model = CompleteTraining
- 
-class EmailSchema(Base):
-    id = fields.Int(data_key="id")
-    subject = fields.Str(data_key="subject")
-    body = fields.Str(data_key="body")
-    sender = fields.Str(data_key="from")
-    recipient = fields.Str(data_key="to")
-    making_phishing = fields.Int(data_key='makingPhishing',dump_only=True)
-    department_id= fields.Int(data_key='departmentId', dump_only=True)
-    sent_date = fields.DateTime(
-        data_key="sentDate",
-        format='iso',
-        load_format='iso',
-        dump_format='%Y-%m-%d %H:%M:%S'
-    )
-    employee = fields.Nested(
-        'EmployeeSchema',
-        only=['id', 'name'],
-        data_key='employee',
-        dump_only=True
-    )
-    emails = fields.List(
-        fields.Nested('EmailSchema', exclude=['employee']),
-        data_key='emails',
-        dump_only=True
-    )
-
- 
-
-    class Meta(Base.Meta):
-        model = Email
-
- 
-class EventLogSchema(Base):
-    id = fields.Int(dump_only=True)
-    action = fields.Str(required=True)
-    timestamp = fields.DateTime(required=True)
-    training_id  = fields.Int(required=True)
-    employee_id = fields.Str( )
-    department_id = fields.Str( )
-    email_id = fields.Str()
-    role_id = fields.Str()
-    data = fields.Str()
 
     @pre_load
     def process_ids(self, data, **kwargs):
@@ -233,8 +243,67 @@ class EventLogSchema(Base):
                     data[field] = []
         return data
     
+
     class Meta(Base.Meta):
         model = EventLog
+    
+ 
+ 
+
+class CompleteTrainingSchema(Base):
+    id = fields.Int(dump_only=True)
+    original_id = fields.Int(required=True, load_only=True)
+    completed_at = fields.DateTime(dump_only=True, format='iso')
+
+    training_name = fields.Str(data_key="trainingName", required=True)
+    training_desc = fields.Str(data_key="trainingDesc", required=True)
+    training_start = FlexibleDateTime(data_key="trainingStart", required=True)
+    training_end = FlexibleDateTime(data_key="trainingEnd", required=True)
+    resource_user = fields.Int(data_key="resourceUser", required=True)
+    max_phishing_mail = fields.Int(data_key="maxPhishingMail", required=True)
+    dept_target = DeptTargetField(data_key="deptTarget", required=True, allow_none=True)
+    departments = fields.Nested('DepartmentSchema', many=True, only=['id', 'name'])
+    status = EnumField(TrainingStatus, by_value=True)
+
+    original_training = fields.Nested('TrainingSchema', exclude=('complete_training',))
+ 
+
+    class Meta(Base.Meta):
+        model = CompleteTraining
+        include_fk = True
+        load_instance = True
+        sqla_session = db.session
+        unknown = EXCLUDE 
+
+
+class EmailSchema(Base):
+    id = fields.Int(data_key="id")
+    subject = fields.Str(data_key="subject")
+    body = fields.Str(data_key="body")
+    sender = fields.Str(data_key="from")
+    recipient = fields.Str(data_key="to")
+    making_phishing = fields.Int(data_key='makingPhishing', dump_only=True)
+    department_id = fields.Int(data_key="departmentId")
+    sent_date = FlexibleDateTime(data_key="date", required=True)
+
+    employee = fields.Nested(
+        'EmployeeSchema',
+        only=['id', 'name'],
+        data_key='employee',
+        dump_only=True
+    )
+    emails = fields.List(
+        fields.Nested('EmailSchema', exclude=['employee']),
+        data_key='emails',
+        dump_only=True
+    )
+
+    class Meta(Base.Meta):
+        model = Email
+        unknown = EXCLUDE
+
+
+ 
 
 # Schema instances for direct usage
 department_schema = DepartmentSchema()
@@ -247,7 +316,6 @@ training_schema = TrainingSchema()
 trainings_schema = TrainingSchema(many=True)
 email_schema = EmailSchema()
 emails_schema = EmailSchema(many=True)
-
 event_log_schema = EventLogSchema()
 event_logs_schema = EventLogSchema(many=True)
 complete_training_schema = CompleteTrainingSchema()
@@ -259,6 +327,6 @@ __all__ = [
     'employee_schema', 'employees_schema',
     'training_schema', 'trainings_schema',
     'email_schema', 'emails_schema',
-    'complete_training_schema','complete_trainings_schema'
+    'complete_training_schema','complete_trainings_schema',
     'event_log_schema', 'event_logs_schema'
 ]

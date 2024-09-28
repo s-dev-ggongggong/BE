@@ -3,7 +3,7 @@ from flask import Blueprint, request, jsonify
 from api.services import training_service
 from utils.api_error_handlers import api_errorhandler
 from utils.http_status_handler import server_error
-from api.services.training_service import create_training_service, update_training_service, soft_delete_training, delete_training, update_training_status
+from api.services.training_service import create_training_service, update_training_service, soft_delete_training, delete_training_service, update_training_status
 from models.training import Training
 from models.schemas import training_schema
 from datetime import datetime
@@ -16,36 +16,32 @@ training_bp = Blueprint('training_bp', __name__)
 
 @api_errorhandler(training_bp)
 def handle_api_error(error):
+    
     return jsonify({"error": str(error)}), 500
 
 # Route: Get all trainings
 @training_bp.route('/', methods=['GET']) 
 def get_all_trainings():
     try:
-        response, status = training_service.get_all_trainings()
-        return jsonify({"data":response,"message":"Trainings fetched successfully"}),status
+        result = training_service.get_all_trainings()
+        if isinstance(result, tuple) and len(result) == 2:
+            data, status = result
+            return jsonify({"data": data, "message": "Trainings fetched successfully"}), status
+        else:
+            return jsonify(result), 200
     except Exception as e:
         return server_error(f"Error fetching trainings: {str(e)}")
-
+    
 # Route: Get training by ID
 @training_bp.route('/<int:id>', methods=['GET'])
 def get_training(id):
     try:
-        training = Training.query.get(id)
-        if not training:
-            return {'error': f'Training with ID {id} not found'}, 404
-
-        # Use schema to serialize training
-        result = training_schema.dump(training)
-
-        return {
-            'data': result,
-            'message': f'Training ID {id} fetched successfully'
-        }, 200
+        response, status = training_service.get_training(id)
+        if status == 404:
+            return jsonify({"error": f"Training with ID {id} not found"}), 404
+        return jsonify({"data": response, "message": f"Training ID {id} fetched successfully"}), status
     except Exception as e:
-        return {
-            'error': f"Error fetching training: {str(e)}"
-        }, 500
+        return jsonify({"error": f"Error fetching training: {str(e)}"}), 500
  
 
 @training_bp.route('/', methods=['POST'])
@@ -59,7 +55,7 @@ def create_training():
         # JSON 데이터 출력 (디버깅용)
         logging.info(f"Received data: {data}")
 
-        # 서비스 함수 호출
+        print("!")
         response, status = create_training_service(data)
         
         return response, status
@@ -69,26 +65,7 @@ def create_training():
         logging.error(f"Exception occurred: {str(e)}")
         return jsonify({"error": str(e)}), 500
 
-# @training_bp.route('/all', methods=['POST'])
-# def bulk_upload_trainings():
-#     logger.info("Bulk upload training request received.")  # Log request start
-#     try:
-#         # Access the request JSON body
-#         data = request.get_json()
-#         if not isinstance(data, list):  # Ensure the incoming data is a list
-#             return jsonify({"error": "Request body must be a list of training records."}), 400
-
-#         # Call the service to handle bulk training creation
-#         response_data, status_code = training_service.bulk_training(data)  # Fix double jsonify handling
-
-#         logger.info(f"Bulk training operation completed with status {status_code}.")  # Log only status code (no response object)
-        
-#         # Directly return `response_data` without wrapping it in `jsonify` again
-#         return response_data, status_code
-
-#     except Exception as e:
-#         logger.error(f"Bulk upload error: {str(e)}")
-#         return jsonify({"error": f"Bulk upload error: {str(e)}"}), 500
+ 
     
 @training_bp.route('/status', methods=['POST'])
 def update_all_training_statuses():
@@ -119,22 +96,23 @@ def update_training_route(id):
 # Route: Delete a training
 # restore 불가 
 # db 에서 완전 삭제
+# @training_bp.route('/<int:id>', methods=['DELETE'])
+# def hard_delete_training_route(id):
+#     response, status = training_service.delete_training_service(id)
+#     if status != 200:
+#         return jsonify(response), status
+#     return jsonify({"data": response, "message": f"Training ID {id} deleted successfully"}), status
+
+
 @training_bp.route('/<int:id>', methods=['DELETE'])
-def hard_delete_training_route(id):
-    response, status = training_service.delete_training_serivce(id)
-    if status != 200:
-        return jsonify(response), status
-    return jsonify({"data": response, "message": f"Training ID {id} deleted successfully"}), status
+def delete_training(id):
+    response, status = soft_delete_training(id)
+    return jsonify(response), status
+
 
 # training 레코드 삭제 # isdelete랑 deleted_at 용 
 # restore 가능
-@training_bp.route('/<int:id>/soft', methods=['POST'])
-def soft_delete_training_route(id):
-    response, status = soft_delete_training(id)
-    if status != 200:
-        return jsonify(response), status
-    return jsonify({"message": f"Training ID {id} successfully soft deleted"}), status
-
+ 
  
 
 #삭제 복구하기 

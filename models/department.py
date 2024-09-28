@@ -9,15 +9,23 @@ class Department(BaseModel,SerializableMixin):
     code2 = db.Column(db.String(50), nullable=False)
     korean_name = db.Column(db.String(100), nullable=False)
     
+    complete_trainings = db.relationship(
+        'CompleteTraining',
+        secondary='complete_training_department',
+        back_populates='departments'
+    )
      
     employees = db.relationship('Employee', back_populates='department')
-    trainings = db.relationship('Training', back_populates='department')
+    trainings = db.relationship('Training', secondary='training_department', back_populates='departments')
+    complete_trainings = db.relationship('CompleteTraining', secondary='complete_training_department', back_populates='departments')
+
+
  # 리스트를 문자열로 저장
 
     def __repr__(self):
         return f'<Department {self.name}>'
     
-    def to_dict(self):
+    def to_dict(self):  
         return {
             'id': self.id,
             'name': self.name,

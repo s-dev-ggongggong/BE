@@ -60,54 +60,48 @@ def process_event(event_data, session):
  
     return event_data
 
+ 
+from sqlalchemy import select
 
 def load_event_logs(file_path):
     app = create_app()
     with app.app_context():
+        trainings = Training.query.all()
+        if not trainings:
+            print("Warning: No trainings found in the database.")
+            return
+        
         with open(file_path, 'r') as file:
             event_logs = json.load(file)
-            
 
         for log in event_logs:
             try:
-                # Safely handle trainingId as either string or integer
-                training_id = log.get('trainingId')
-                if isinstance(training_id, str):
-                    training_id = int(training_id) if training_id.isdigit() else None
-                elif isinstance(training_id, int):
-                    training_id = training_id
-                else:
-                    training_id = None  # Handle any other unexpected format
+                training_id = int(log['trainingId'])
+                training = db.session.get(Training, training_id)
+                if not training:
+                    print(f"Warning: Training with ID {training_id} not found")
+                    continue
 
-                # Map log fields to EventLog model attributes
-                event = EventLog(
-                    id=log.get('id'),
-                    action=log.get('action'),
-                    timestamp=log.get('timestamp'),
-                    training_id=training_id,
-                    department_id=log.get('departmentId'),  # Assuming department_id is a list of integers
-                    data=log.get('data')
-                )
+                event_data = {
+                    'action': log['action'],
+                    'timestamp': datetime.strptime(log['timestamp'], '%Y-%m-%d %H:%M:%S'),
+                    'training_id': training_id,
+                    'department_id': json.dumps([str(x) for x in log['departmentId']]),
+                    'data': log.get('data', 'agent')
+                }
 
-                # Add event log to session
-                db.session.add(event)
-
-            except IntegrityError as e:
-                db.session.rollback()
-                print(f"Integrity error while processing log ID {log.get('id')}: {str(e)}")
+                new_event = EventLog(**event_data)
+                db.session.add(new_event)
 
             except Exception as e:
-                db.session.rollback()
-                print(f"Error processing log ID {log.get('id')}: {str(e)}")
+                print(f"Error processing log: {str(e)}")
 
-        # Commit the session after processing all logs
         try:
             db.session.commit()
             print("All event logs loaded successfully.")
-        except Exception as e:
+        except SQLAlchemyError as e:
             db.session.rollback()
             print(f"Error committing session: {str(e)}")
-
 # Run the function with the updated event logs JSON path
  
 
