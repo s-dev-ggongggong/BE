@@ -90,25 +90,25 @@ def load_roles(data):
         db.session.rollback()
         print(f"Error committing roles to the database: {e}")
 
+
 def load_trainings(training_data):
+    trainings = []
     for item in training_data:
         item.pop('id', None)
-        print(f"처리 전 항목: {item}")
-        if 'deptTarget' in item:
-            item['dept_target'] = item.pop('deptTarget')
-        print(f"처리 후 항목: {item}")
-        
+        print(f"스키마 로딩 직전 item: {item}")
         try:
-            print(f"스키마 로딩 직전 item: {item}")
-            training = training_schema.load(item, session=db.session)
-            db.session.add(training)
+            training_dict = training_schema.load(item)
+            training = Training(**training_dict)
+            print(f"스키마 로딩 후 training: {training.__dict__}")
+            trainings.append(training)
         except ValidationError as err:
             print(f"검증 오류 '{item.get('trainingName', '알수없음')}': {err.messages}")
-        except SQLAlchemyError as e:
-            print(f"DB 오류 '{item.get('trainingName', '알수없음')}': {e}")
-            db.session.rollback()
-
+        except Exception as e:
+            print(f"예외 발생: {e}")
+            print(f"training_dict: {training_dict}")  # 디버깅용 출력 추가
+    
     try:
+        db.session.bulk_save_objects(trainings)
         db.session.commit()
         print("트레이닝 데이터 로드 완료")
     except SQLAlchemyError as e:

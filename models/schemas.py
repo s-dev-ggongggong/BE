@@ -1,5 +1,5 @@
 from flask import json
-from marshmallow import Schema, fields, EXCLUDE, post_load, ValidationError, pre_load, post_dump
+from marshmallow import Schema, fields, EXCLUDE, post_load, ValidationError, pre_load, post_dump, validates
 from sqlalchemy import or_
 from extensions import ma, db
 from marshmallow_sqlalchemy import SQLAlchemyAutoSchema
@@ -24,14 +24,15 @@ class DeptTargetField(fields.Field):
         if value is None or value == []:
             return '[]'
         if isinstance(value, list):
-            return json.dumps(value)
+            return json.dumps(value)  # 여기서 JSON 문자열로 변환
         if isinstance(value, str):
             try:
-                json.loads(value)
+                json.loads(value)  # JSON 형식 검증
                 return value
             except json.JSONDecodeError:
                 raise ValidationError("Invalid JSON string")
         raise ValidationError(f"Invalid type for dept_target: {type(value)}")
+    
         
 class JSONList(fields.Field):
     def _serialize(self, value, attr, obj, **kwargs):
@@ -180,8 +181,7 @@ class TrainingSchema(SQLAlchemyAutoSchema):
     resource_user = fields.Int(data_key="resourceUser", required=True, allow_none=False)
     max_phishing_mail = fields.Int(data_key="maxPhishingMail", required=True, allow_none=False)
     dept_target = DeptTargetField(data_key="deptTarget", required=True, allow_none=True)
-    status = EnumField(TrainingStatus, by_value=True)
-   
+    status = EnumField(TrainingStatus, by_value=True, missing=TrainingStatus.PLAN)   
     departments = fields.Nested('DepartmentSchema', many=True, only=['id', 'name'])    
    
    
@@ -193,14 +193,20 @@ class TrainingSchema(SQLAlchemyAutoSchema):
     complete_training = fields.Nested('CompleteTrainingSchema', exclude=('original_training',))
     event_logs = fields.Nested('EventLogSchema', many=True, exclude=('training',))
 
- 
+    @validates('dept_target')
+    def validate_dept_target(self, value):
+        if isinstance(value, list):
+            return json.dumps(value)
+        return value
+    
     @post_load
-    def process_dept_target(self, data, **kwargs):
-        if isinstance(data, dict) and 'dept_target' in data:
-            if isinstance(data['dept_target'], list):
-                data['dept_target'] = json.dumps(data['dept_target'])
-        return data
+    def make_training(self, data, **kwargs):
+        if 'dept_target' in data:
+            data['dept_target'] = json.dumps(data['dept_target'])
+        return data  # Training 인스턴스를 생성하지 않고 딕셔너리 반환
 
+
+        
     @post_dump
     def process_dept_target_dump(self, data, **kwargs):
         if 'dept_target' in data and isinstance(data['dept_target'], list):
@@ -210,7 +216,7 @@ class TrainingSchema(SQLAlchemyAutoSchema):
     class Meta:
         model = Training
         include_fk = True
-        load_instance = True
+        load_instance = False
         sqla_session = db.session
         unknown = EXCLUDE
 
@@ -224,6 +230,8 @@ class EventLogSchema(Base):
     department_id = JSONList(data_key="departmentId")
     data = fields.Dict(data_key="data")
     training = fields.Nested('TrainingSchema', exclude=('event_logs',))
+
+
 
 
     @pre_load
@@ -263,10 +271,29 @@ class CompleteTrainingSchema(Base):
     max_phishing_mail = fields.Int(data_key="maxPhishingMail", required=True)
     dept_target = DeptTargetField(data_key="deptTarget", required=True, allow_none=True)
     departments = fields.Nested('DepartmentSchema', many=True, only=['id', 'name'])
-    status = EnumField(TrainingStatus, by_value=True)
+    status = EnumField(TrainingStatus, by_value=True, missing=TrainingStatus.FIN)   
 
     original_training = fields.Nested('TrainingSchema', exclude=('complete_training',))
- 
+    
+    
+    @validates('dept_target')
+    def validate_dept_target(self, key, value):
+        if isinstance(value, list):
+            return json.dumps(value)
+        return value
+    
+    @post_load
+    def make_training(self, data, **kwargs):
+        if 'dept_target' in data:
+            data['dept_target'] = json.dumps(data['dept_target'])
+        return Training(**data)
+        
+    @post_dump
+    def process_dept_target_dump(self, data, **kwargs):
+        if 'dept_target' in data and isinstance(data['dept_target'], list):
+            data['dept_target'] = json.dumps(data['dept_target'])
+        return data
+
 
     class Meta(Base.Meta):
         model = CompleteTraining

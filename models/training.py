@@ -62,3 +62,10 @@ class Training(BaseModel):
     @dept_target_list.setter
     def dept_target_list(self, value):
         self.dept_target = json.dumps(value)
+
+
+    def __init__(self, **kwargs):
+        self.status = kwargs.pop('status', TrainingStatus.PLAN)
+        super(Training, self).__init__(**kwargs)
+        if 'dept_target' in kwargs and isinstance(kwargs['dept_target'], list):
+            self.dept_target = json.dumps(kwargs['dept_target'])
