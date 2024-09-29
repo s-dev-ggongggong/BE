@@ -11,59 +11,57 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
+      - name: Checkout code
+        uses: actions/checkout@v2
 
-      - name: Install ssh key for bastion
-        uses: shimataro/ssh-key-action@v2
-        with:
-          aws-access-key-id: ${{secrets.EC2_SSH_PRIVATE_KEY}}
-          aws-secret-access-key: ${{secrets.AWS_SECRET_ACCESS_KEY}}
-          aws-region: ap-northeast-2
-      - name: Deploy to EC2
-        env:
-          BASTION_HOST: ${{secrets.BST_HOST}}
-          BASTION_USER: ec2-user
-          BASTION_PRIVATE_IP: ${{secrets.BST_PRIV}}
-          PRIVATE_EC2_HOST: ${{secrets.E_BACK}}
-          PRIVTATE_EC2_USER: ec2-user
-          PRIVATE_KEY: ${{secrets.EC2_SSH_PRIVATE_KEY}}
+      - name: Set up SSH key
         run: |
-          echo "$PRIVATE_KEY" > private_key && chmod 600 private_key
+          mkdir -p ~/.ssh
+          echo "${{ secrets.EC2_SSH_PRIVATE_KEY }}" > ~/.ssh/bst_rsa
+          chmod 600 ~/.ssh/bst_rsa
+          ssh-keyscan -H ${{ secrets.BST_HOST }} >> ~/.ssh/known_hosts
 
-          ssh -f -N -L 2222:$PRIVATE_EC2_HOST:22 $BASTION_USER@$BASTION_HOST
+      - name: Create SSH Tunnel to Bastion
+        run: |
+          ssh -f -N -L 2222:${{ secrets.E_BACK }}:22 ec2-user@${{ secrets.BST_HOST }} -i ~/.ssh/bst_rsa
 
-          sleep 5
+      - name: Deploy to EC2
+        run: |
+          ssh -o StrictHostKeyChecking=no -p 2222 ec2-user@localhost << 'EOF'
+            # 배포 디렉토리로 이동
+            cd /home/ec2-user 
 
-          ssh -o StrictHostKeyChecking=no -p 2222 -i private_ec2_key $PRIVATE_EC2_USER@localhost '
-
-            sudo yum update -y
-            sudo yum install -y python3 python3-pip sqlite
-
-            cd ./BE
+            if [ -d "BE" ]; then
+              cd BE
+              git pull origin main
+            else
+              git clone https://github.com/s-dev-ggongggong/BE.git BE
+              cd BE
+            fi
 
             python3 -m venv venv
             source venv/bin/activate
 
-            pip3 install --user -r requirements.txt
-            
+            pip install -r requirements.txt
 
-            if[! -f db/e_sol.db] ; then
-              sqlite3 db/e_sol.db <schema.sql
+            if [ ! -f db/e_sol.db ]; then
+              sqlite3 db/e_sol.db < schema.sql
             fi
 
-            export FLASK_APP=run.py
-            flask db updarade
+            export FLASK_APP=app.py
+            flask db upgrade
 
-            if pgrep -f 'flask run ' > /dev/null
-            then
-              echo "Flask runing already .Restart"
-              pkill -f "flask run"
+            # 서버 재시작
+            if pgrep -f 'gunicorn' > /dev/null; then
+              echo "Gunicorn 돌고 있음 . 재시작..."
+              pkill -f "gunicorn"
             fi
 
-            nohup flask run --host=0.0.0.0 > flask.log 2>&1 &
-            echo "Flask server start"
-          pkill -f "ssh -f -N -L 2222:$PRIVATE_EC2_HOST:22"
+            nohup gunicorn --bind 0.0.0.0:8000 app:app > gunicorn.log 2>&1 &
+            echo "Gunicorn server started"
+          EOF
 
-      - name: Clean up
+      - name: Clean up SSH Tunnel
         if: always()
-        run: rm -f private_ec2_key
+        run: |
+          pkill -f "ssh -f -N -L 2222:${{ secrets.E_BACK }}:22"
