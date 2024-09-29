@@ -114,7 +114,9 @@ def create_delete_event_log(training_id):
 
 def create_event_log_for_training(training, session):
     try:
-        dept_targets = json.loads(training.dept_target)  # JSON 문자열을 리스트로 변환
+        print(4,training.dept_target)        
+        dept_targets = training.dept_target
+
         if not dept_targets:
             logger.warning(f"No department targets for training ID {training.id}")
             return
@@ -123,7 +125,7 @@ def create_event_log_for_training(training, session):
             action="targetSetting",
             timestamp=training.training_start,
             training_id=training.id,
-            department_id=json.dumps(dept_targets),  # 다시 JSON 문자열로 저장
+            department_id=dept_targets,  # 다시 JSON 문자열로 저장
             data="agent"
         )
         session.add(event_log)
@@ -134,6 +136,7 @@ def create_event_log_for_training(training, session):
 
 def update_training_status(training, session):
     now = datetime.utcnow()
+    print("6")
     if training.training_start <= now < training.training_end:
         training.status = TrainingStatus.RUN
     elif now >= training.training_end:
@@ -142,6 +145,7 @@ def update_training_status(training, session):
         
         # Update EventLog when training is finished
         event_log = EventLog.query.filter_by(training_id=training.id).first()
+        print(event_log)
         if event_log:
             event_log.action = "remove"
             event_log.timestamp = now
@@ -155,19 +159,24 @@ def create_training_service(data):
     with session_scope() as session:
         try:
             schema = TrainingSchema()
+            print(1,data)
             new_training = schema.load(data, session=session)
-            
-            if check_training_duplicate(session, new_training):
+            print(2,new_training)
+            if check_training_duplicate(session, new_training): 
                 return handle_response(400, message="동일한 트레이닝이 이미 존재합니다.")
             
             session.add(new_training)
+            print(3)
             session.flush()
+            print("?")
             create_event_log_for_training(new_training, session)
+            print("5")
             update_training_status(new_training, session)
             session.commit()
+            print("7")
+            #result = schema.dump(new_training)
             
-            result = schema.dump(new_training)
-            return handle_response(201, data=result, message="트레이닝 생성 성공")
+            return handle_response(200, message="트레이닝 생성 성공")
         except ValidationError as ve:
             return handle_response(400, message=f"데이터 검증 오류: {ve.messages}")
         except Exception as e:

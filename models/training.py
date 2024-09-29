@@ -1,4 +1,4 @@
-from sqlalchemy.types import TypeDecorator, TEXT
+from sqlalchemy import Column, Integer, String, Text, DateTime, Boolean, Enum as SQLAlchemyEnum
 import json
 from extensions import db
 from datetime import datetime
@@ -40,7 +40,7 @@ class Training(BaseModel):
  
     created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
     is_finished = db.Column(db.Boolean, default=False)
-    status = EnumField(TrainingStatus, by_value=True)
+    status = db.Column(SQLAlchemyEnum(TrainingStatus), nullable=False, default=TrainingStatus.PLAN)
 
     is_deleted = db.Column(db.Boolean, default=False)
     deleted_at = db.Column(db.DateTime, nullable=True)
@@ -65,6 +65,7 @@ class Training(BaseModel):
 
 
     def __init__(self, **kwargs):
+        # 초기화 시 status 필드에 기본값 설정
         self.status = kwargs.pop('status', TrainingStatus.PLAN)
         super(Training, self).__init__(**kwargs)
         if 'dept_target' in kwargs and isinstance(kwargs['dept_target'], list):

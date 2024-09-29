@@ -24,7 +24,7 @@ class DeptTargetField(fields.Field):
         if value is None or value == []:
             return '[]'
         if isinstance(value, list):
-            return json.dumps(value)  # 여기서 JSON 문자열로 변환
+            return json.dumps(value)  # 리스트를 JSON 문자열로 변환
         if isinstance(value, str):
             try:
                 json.loads(value)  # JSON 형식 검증
@@ -32,7 +32,7 @@ class DeptTargetField(fields.Field):
             except json.JSONDecodeError:
                 raise ValidationError("Invalid JSON string")
         raise ValidationError(f"Invalid type for dept_target: {type(value)}")
-    
+
         
 class JSONList(fields.Field):
     def _serialize(self, value, attr, obj, **kwargs):
@@ -181,10 +181,11 @@ class TrainingSchema(SQLAlchemyAutoSchema):
     resource_user = fields.Int(data_key="resourceUser", required=True, allow_none=False)
     max_phishing_mail = fields.Int(data_key="maxPhishingMail", required=True, allow_none=False)
     dept_target = DeptTargetField(data_key="deptTarget", required=True, allow_none=True)
-    status = EnumField(TrainingStatus, by_value=True, missing=TrainingStatus.PLAN)   
-    departments = fields.Nested('DepartmentSchema', many=True, only=['id', 'name'])    
-   
-   
+
+    status = EnumField(TrainingStatus, by_value=True, missing=TrainingStatus.PLAN)
+    
+    departments = fields.Nested('DepartmentSchema', many=True, only=['id', 'name'])
+
     created_at = fields.DateTime(dump_only=True, format='iso')
     is_finished = fields.Bool(dump_only=True)
     status = fields.Str(dump_only=True)
@@ -198,29 +199,35 @@ class TrainingSchema(SQLAlchemyAutoSchema):
         if isinstance(value, list):
             return json.dumps(value)
         return value
-    
+
     @post_load
     def make_training(self, data, **kwargs):
-        if 'dept_target' in data:
-            data['dept_target'] = json.dumps(data['dept_target'])
+        print(f"@post_load data: {data}")
+        # data가 dict 타입인지 확인하고 Training 객체가 아닌지 체크
+        if isinstance(data, dict) and 'dept_target' in data:
+            # dept_target 값이 JSON 문자열인지 확인하고 변환
+            if isinstance(data['dept_target'], list):
+                data['dept_target'] = json.dumps(data['dept_target'])
         return data  # Training 인스턴스를 생성하지 않고 딕셔너리 반환
 
-
-        
     @post_dump
     def process_dept_target_dump(self, data, **kwargs):
-        if 'dept_target' in data and isinstance(data['dept_target'], list):
-            data['dept_target'] = json.dumps(data['dept_target'])
+        print(f"@post_dump data: {data}")
+        # 데이터 덤프 시 data가 dict 타입인지 확인
+        if isinstance(data, dict) and 'dept_target' in data and isinstance(data['dept_target'], str):
+            try:
+                # JSON 문자열을 리스트로 변환
+                data['dept_target'] = json.loads(data['dept_target'])
+            except json.JSONDecodeError:
+                pass  # 잘못된 JSON 문자열일 경우 예외를 무시
         return data
 
     class Meta:
         model = Training
         include_fk = True
-        load_instance = False
+        load_instance = True
         sqla_session = db.session
         unknown = EXCLUDE
-
-
 
 class EventLogSchema(Base):
     id = fields.Int(data_key="id")
