@@ -45,10 +45,9 @@ def create_employee():
 def get_users_with_trainings():
     users, status = employee_service.get_users_with_trainings()
     return handle_response(status, data=users, message="Employees with trainings retrieved successfully")
-# employee.py
-
-@employee_bp.route('/admin', methods=['POST'])
-def admin_login_route():
-    data = convert_dict_keys_to_snake_case(request.json)
-    login_result, status_code = employee_service.admin_login(data.get('admin_id'), data.get('admin_pw'))
-    return jsonify(login_result), status_code
+ 
+# @employee_bp.route('/admin', methods=['POST'])
+# def admin_login_route():
+#     data = convert_dict_keys_to_snake_case(request.json)
+#     login_result, status_code = employee_service.admin_login(data.get('admin_id'), data.get('admin_pw'))
+#     return jsonify(login_result), status_code

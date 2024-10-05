@@ -183,9 +183,11 @@ def admin_login(admin_id, admin_pw):
             "role_name": 'IT 관리자',
             "is_admin": True
         }
-        return {"status": 200, "data": {"access_token": access_token, "admin_info": admin_info}, "message": "로그인 성공"}, 200
-    return {"status": 401, "message": "잘못된 관리자 정보"}, 401
-    
+        return {
+            "access_token": access_token, 
+            "admin_info": admin_info
+        }, 200
+    return {"error": "잘못된 관리자 정보"}, 401
 
        
         

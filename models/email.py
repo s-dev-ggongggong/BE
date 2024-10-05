@@ -11,7 +11,7 @@ class Email(BaseModel, SerializableMixin):
     body = db.Column(db.Text, nullable=False)
     sender = db.Column(db.String(255), nullable=False)
     recipient = db.Column(db.String(255), nullable=False)
-    sent_date = db.Column(db.DateTime, default=datetime.utcnow)
+    sent_date = db.Column(db.DateTime, nullable=False)  
     is_phishing = db.Column(db.Boolean, default=False)
     employee_id = db.Column(db.Integer, db.ForeignKey('employees.id'), nullable=True)
     employee = db.relationship('Employee', backref='emails', lazy=True)

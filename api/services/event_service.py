@@ -25,19 +25,12 @@ def handle_event_log(training_id, data=None):
         if not training:
             return {'error': 'Training not found'}, 404
 
-        now = datetime.utcnow()
-        timestamp = training.training_end if now > training.training_end else training.training_start
-        action = 'remove' if now > training.training_end else 'targetSetting'
- 
         event_data = {
             'training_id': training_id,
-             'department_id': str(training.department_id),
-            'employee_id': json.dumps([emp.id for emp in training.employees]),
-            'email_id': json.dumps([email.id for email in training.emails]),
-            'role_id': json.dumps([role.id for role in training.roles]),
-            'timestamp': timestamp,
-            'action': action,
-            'data': data if data is not None else ""
+            'department_id': json.dumps(training.dept_target),
+            'timestamp': training.training_start,
+            'action': 'targetSetting',
+            'data': data if data is not None else "agent"
         }
 
         existing_event = EventLog.query.filter_by(training_id=training_id).first()
@@ -45,17 +38,18 @@ def handle_event_log(training_id, data=None):
         if existing_event:
             for key, value in event_data.items():
                 setattr(existing_event, key, value)
-            db.session.commit()
-            return {'message': 'Event log updated', 'id': existing_event.id}, 200
         else:
             new_event = EventLog(**event_data)
             db.session.add(new_event)
-            db.session.commit()
-            return {'message': 'Event log created', 'id': new_event.id}, 201
+        
+        db.session.commit()
+        return {'message': 'Event log updated or created'}, 200
 
     except SQLAlchemyError as e:
         db.session.rollback()
         return {"error": str(e)}, 500
+    
+
 def handle_multiple_events(training_ids, data=None):
     results = []
     for training_id in training_ids:

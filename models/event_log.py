@@ -8,9 +8,12 @@ from sqlalchemy.exc import SQLAlchemyError, IntegrityError
 from sqlalchemy import or_
 import logging
 
+from sqlalchemy.orm import validates
+from marshmallow import fields, pre_load, post_dump, ValidationError
+
 logger = logging.getLogger(__name__)
 
-
+ 
 
 class EventLog(BaseModel):
     __tablename__ = 'event_logs'
@@ -19,29 +22,26 @@ class EventLog(BaseModel):
     action = db.Column(db.String(50), nullable=False)
     timestamp = db.Column(db.DateTime, nullable=False)
     training_id = db.Column(db.Integer, db.ForeignKey('trainings.id'), nullable=False)
-    department_id = db.Column(db.Integer,db.ForeignKey('departments.id'),nullable=False)
+    department_id = db.Column(db.Text, nullable=False)  # JSON 문자열로 저장
     data = db.Column(db.Text, nullable=True, default="")
 
     training = db.relationship('Training', back_populates='event_logs')
-
  
- 
+    @property
+    def department_id_list(self):
+        return [int(x) for x in json.loads(self.department_id) if str(x).isdigit()]
+    
+    @department_id_list.setter
+    def department_id_list(self, value):
+        self.department_id = json.dumps([str(x) for x in value])
 
     def to_dict(self):
-        def safe_json_loads(value):
-            if value:
-                try:
-                    return json.loads(value)
-                except json.JSONDecodeError:
-                    return value
-            return []
-
         return {
             'id': self.id,
             'action': self.action,
             'timestamp': self.timestamp.strftime('%Y-%m-%d %H:%M:%S'),
             'trainingId': self.training_id,
-            'departmentId': safe_json_loads(self.department_id),
+            'departmentId': json.loads(self.department_id),
             'data': self.data
         }
 

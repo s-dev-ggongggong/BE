@@ -290,6 +290,7 @@ class UserEventLogSchema(Base):
         include_fk = True
         sqla_session = db.session
 
+ 
 
 class CompleteTrainingSchema(Base):
     id = fields.Int(dump_only=True)
