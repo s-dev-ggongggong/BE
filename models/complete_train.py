@@ -39,9 +39,12 @@ class CompleteTraining(BaseModel):
     max_phishing_mail = db.Column(db.Integer, nullable=False)
     dept_target = db.Column(JSONEncodedDict, nullable=False)
     status = db.Column(db.Enum(TrainingStatus), default=TrainingStatus.FIN, nullable=False)
+    training_id = db.Column(db.Integer, db.ForeignKey('trainings.id'), nullable=False)
 
     completed_at = db.Column(db.DateTime, default=datetime.utcnow)
-    
+    original_training = db.relationship('Training', back_populates='complete_training')
+
+
     # 관련 이메일 관리
     emails = db.relationship('Email', backref='complete_training', lazy=True)
 

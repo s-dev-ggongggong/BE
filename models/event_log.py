@@ -22,7 +22,7 @@ class EventLog(BaseModel):
     department_id = db.Column(db.Integer,db.ForeignKey('departments.id'),nullable=False)
     data = db.Column(db.Text, nullable=True, default="")
 
-    training = db.relationship('Training', backref='event_logs')
+    training = db.relationship('Training', back_populates='event_logs')
 
  
  

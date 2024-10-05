@@ -60,6 +60,8 @@ def create_app(config_class=Config):
 
     with app.app_context():
         logger.info("Application has started successfully.")
+        from models.init import Training, CompleteTraining ,EventLog  # Add this line
+        db.create_all() 
 
     return app
 

@@ -11,7 +11,7 @@ class Department(BaseModel,SerializableMixin):
     
      
     employees = db.relationship('Employee', back_populates='department')
-    trainings = db.relationship('Training', back_populates='department')
+    trainings = db.relationship('Training', secondary='training_department', back_populates='departments')
  # 리스트를 문자열로 저장
 
     def __repr__(self):
